@@ -76,6 +76,7 @@ import { isAndroid, Device, ApplicationSettings, Frame } from '@nativescript/cor
 import { deviceAPI } from '../services/device-api';
 import Settings from './Settings.vue';
 import PassEditPage from './PassEditPage.vue';
+import { passwordStore } from '../services/store';
 
 interface PasswordEntry {
     uid: string;
@@ -86,7 +87,6 @@ const isScanning = ref(false);
 const discoveredDevices = ref<Partial<Peripheral>[]>([]);
 const statusMessage = ref('App started. Loading...');
 const currentMode = ref<'disconnected' | 'connecting' | 'list'>('disconnected');
-import { passwordStore } from '../services/store';
 const selectedPasswordEntry = ref<PasswordEntry | null>(null);
 
 // Reconnection Logic
@@ -180,8 +180,8 @@ const disconnectAndGoHome = () => {
     reconnectAttempts.value = 0; // Reset reconnection attempts
 };
 
-const loadPasswordList = async () => {
-    if (passwordStore.entries.length > 0) {
+const loadPasswordList = async (forced) => {
+    if (!forced && passwordStore.entries.length > 0) {
         statusMessage.value = `Using cached passwords (${passwordStore.entries.length} entries).`;
         return; // Use cached passwords if available
     }
@@ -262,7 +262,7 @@ const connectToDevice = async (device: Partial<Peripheral>, isReconnect: boolean
                     const authResponse = await deviceAPI.authenticate();
                     statusMessage.value = `Authentication: ${authResponse}`;
                     currentMode.value = 'list';
-                    //loadPasswordList();
+                    loadPasswordList(true);
                 } catch (authErr) {
                     console.error(`Authentication failed: ${authErr}`);
                     statusMessage.value = `Authentication failed: ${authErr.message}`;
@@ -351,8 +351,8 @@ const onAddNewPassword = () => {
             propsData: {
                 passwordEntry: {
                     name: '',
+                    layout: -1,
                     uid: passwordStore.entries.length.toString()
-
                 }
             }
         }

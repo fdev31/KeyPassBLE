@@ -57,8 +57,7 @@ const onNavigatingTo = (event: NavigatedData) => {
         isEditMode.value = true;
         name.value = passwordEntry.name;
         uid.value = passwordEntry.uid;
-        // set the selectedLayout
-        selectedLayout.value = LAYOUT_OPTIONS.findIndex(layout => layout.value === passwordEntry.layout);
+        selectedLayout.value = passwordEntry.layout;
     }
 };
 
