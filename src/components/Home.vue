@@ -3,7 +3,7 @@
         <ActionBar :title="actionBarTitle" class="action-bar">
             <NavigationButton v-if="currentMode === 'list'" text="Back" @tap="disconnectAndGoHome" />
         </ActionBar>
-        <GridLayout rows="auto, auto, *" class="page-container">
+        <GridLayout rows="auto, *, auto" class="page-container">
 
             <!-- Disconnected Mode -->
             <template v-if="currentMode === 'disconnected' || currentMode === 'connecting'">
@@ -12,9 +12,7 @@
                     <Button col="1" text="Paired Devices" @tap="listPairedDevices" :isEnabled="!isScanning" class="btn btn-secondary"></Button>
                 </GridLayout>
 
-                <Label row="1" :text="statusMessage" textWrap="true" class="status-label"></Label>
-
-                <ScrollView row="2" class="list-container">
+                <ScrollView row="1" class="list-container">
                     <StackLayout>
                         <StackLayout v-for="device in discoveredDevices" :key="device.UUID" @tap="connectToDevice(device)" class="list-item">
                             <Label :text="device.name || 'Unknown Device'" class="list-item-name"></Label>
@@ -22,31 +20,16 @@
                         </StackLayout>
                     </StackLayout>
                 </ScrollView>
+
+                <Label row="2" :text="statusMessage" textWrap="true" class="status-label"></Label>
             </template>
 
             <!-- List Mode -->
             <template v-if="currentMode === 'list'">
                 <Label row="0" :text="statusMessage" textWrap="true" class="status-label"></Label>
 
-                <!-- Advanced Options -->
-                <StackLayout row="1" class="advanced-options-container">
-                    <Button text="Toggle Advanced Options" @tap="showAdvancedOptions = !showAdvancedOptions" class="btn btn-secondary"></Button>
-                    <StackLayout v-if="showAdvancedOptions" class="advanced-options-content">
-                        <Label text="End with Return Key" class="option-label"></Label>
-                        <Switch v-model="endWithReturn" class="option-switch"></Switch>
-
-                        <Label text="Use Layout Override" class="option-label"></Label>
-                        <Switch v-model="useLayoutOverride" class="option-switch"></Switch>
-
-                        <Label text="Keyboard Layout" class="option-label"></Label>
-                        <SegmentedBar v-model="selectedLayout" :isEnabled="useLayoutOverride">
-                            <SegmentedBarItem v-for="layout in LAYOUT_OPTIONS" :key="layout.value" :title="layout.label"></SegmentedBarItem>
-                        </SegmentedBar>
-                    </StackLayout>
-                </StackLayout>
-
                 <!-- Password List -->
-                <ScrollView row="2" class="list-container">
+                <ScrollView row="1" class="list-container">
                     <StackLayout>
                         <StackLayout v-for="entry in passwordEntries" :key="entry.uid" @tap="onPasswordSelected(entry)" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
                             <Label :text="entry.name" class="list-item-name"></Label>
@@ -54,6 +37,31 @@
                         <Label v-if="passwordEntries.length === 0" text="No passwords found." class="status-label"></Label>
                     </StackLayout>
                 </ScrollView>
+
+                <StackLayout row="2">
+                    <!-- Advanced Options -->
+                    <StackLayout class="advanced-options-container">
+                        <Button text="Toggle Advanced Options" @tap="showAdvancedOptions = !showAdvancedOptions" class="btn btn-secondary"></Button>
+                        <StackLayout v-if="showAdvancedOptions" class="advanced-options-content">
+                            <Label text="End with Return Key" class="option-label"></Label>
+                            <Switch v-model="endWithReturn" class="option-switch"></Switch>
+
+                            <Label text="Use Layout Override" class="option-label"></Label>
+                            <Switch v-model="useLayoutOverride" class="option-switch"></Switch>
+
+                            <Label text="Keyboard Layout" class="option-label"></Label>
+                            <SegmentedBar v-model="selectedLayout" :isEnabled="useLayoutOverride">
+                                <SegmentedBarItem v-for="layout in LAYOUT_OPTIONS" :key="layout.value" :title="layout.label"></SegmentedBarItem>
+                            </SegmentedBar>
+                        </StackLayout>
+                    </StackLayout>
+
+                    <!-- Action Buttons -->
+                    <GridLayout columns="*, *" class="action-buttons-container">
+                        <Button col="0" text="+ Add New" @tap="onAddNewPassword" class="btn btn-primary icon-button"></Button>
+                        <Button col="1" text="⚙️ Settings" @tap="onSettings" class="btn btn-secondary icon-button"></Button>
+                    </GridLayout>
+                </StackLayout>
             </template>
 
         </GridLayout>
@@ -329,6 +337,17 @@ const startScan = async () => {
         isScanning.value = false;
     }
 };
+
+const onAddNewPassword = () => {
+    alert("Add New Password button pressed!");
+    // TODO: Implement navigation to a new password creation screen
+};
+
+const onSettings = () => {
+    alert("Settings button pressed!");
+    // TODO: Implement navigation to a settings screen
+};
+
 </script>
 
 <style>
@@ -345,8 +364,10 @@ const startScan = async () => {
     .list-item-uuid { font-size: 14; color: #6B7280; }
     .list-item.selected { background-color: #E0E7FF; }
     .type-button { margin-bottom: 16; }
-    .advanced-options-container { margin-top: 16; padding: 16; border-width: 1; border-color: #E5E7EB; border-radius: 8; }
+    .advanced-options-container { margin-top: 8; padding: 0; }
     .advanced-options-content { margin-top: 16; }
     .option-label { font-size: 16; font-weight: bold; margin-bottom: 8; color: #111827; }
     .option-switch { margin-bottom: 16; }
+    .action-buttons-container { margin-top: 16; margin-bottom: 16; }
+    .icon-button { font-size: 24; padding: 8; width: 50; height: 50; border-radius: 25; text-align: center; vertical-align: center; }
 </style>
