@@ -22,9 +22,7 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'nativescript-vue';
 import { ApplicationSettings } from '@nativescript/core';
-import { DeviceAPI } from '../services/device-api';
-
-const deviceAPI = new DeviceAPI();
+import { deviceAPI } from '../services/device-api';
 
 
 const deviceName = ref('');

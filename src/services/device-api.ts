@@ -11,7 +11,7 @@ const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const NUS_TX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Write
 const NUS_RX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Notifications
 
-export class DeviceAPI {
+class DeviceAPI {
     private bluetooth: Bluetooth;
     private peripheral: Peripheral | null = null;
     private responseResolver: ((value: string | PromiseLike<string>) => void) | null = null;
@@ -259,3 +259,5 @@ export class DeviceAPI {
         return this.sendCommand({ cmd: "restore", data });
     }
 }
+
+export const deviceAPI = new DeviceAPI();

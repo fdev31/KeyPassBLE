@@ -32,7 +32,7 @@
                 <!-- Password List -->
                 <ScrollView row="1" class="list-container">
                     <StackLayout>
-                        <StackLayout v-for="entry in passwordEntries" :key="entry.uid" @tap="onPasswordSelected(entry)" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
+                        <StackLayout v-for="entry in passwordEntries" :key="entry.uid" @tap="onPasswordSelected(entry)" @longPress="onEditPassword(entry)" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
                             <Label :text="entry.name" class="list-item-name"></Label>
                         </StackLayout>
                         <Label v-if="passwordEntries.length === 0" text="No passwords found." class="status-label"></Label>
@@ -73,7 +73,7 @@
 import { ref, onMounted, computed, watch, $navigateTo } from 'nativescript-vue';
 import { Peripheral } from '@nativescript-community/ble';
 import { isAndroid, Device, ApplicationSettings, Frame } from '@nativescript/core';
-import { DeviceAPI } from '../services/device-api';
+import { deviceAPI } from '../services/device-api';
 import Settings from './Settings.vue';
 import PassEditPage from './PassEditPage.vue';
 
@@ -82,7 +82,6 @@ interface PasswordEntry {
     name: string;
 }
 
-const deviceAPI = new DeviceAPI();
 const isScanning = ref(false);
 const discoveredDevices = ref<Partial<Peripheral>[]>([]);
 const statusMessage = ref('App started. Loading...');
@@ -344,6 +343,16 @@ const startScan = async () => {
 
 const onAddNewPassword = () => {
     $navigateTo(PassEditPage);
+};
+
+const onEditPassword = (entry: PasswordEntry) => {
+    $navigateTo(PassEditPage, {
+        context: {
+            propsData: {
+                passwordEntry: entry
+            }
+        }
+    });
 };
 
 const onSettings = () => {
