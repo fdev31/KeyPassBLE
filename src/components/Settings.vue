@@ -3,19 +3,21 @@
         <ActionBar title="Settings" class="action-bar">
             <NavigationButton text="Back" />
         </ActionBar>
+        <ScrollView>
         <StackLayout class="page-container">
 
             <Label text="Device Name" class="setting-label"></Label>
             <TextField v-model="deviceName" hint="Enter device name" class="setting-input"></TextField>
 
             <Label text="Passphrase" class="setting-label"></Label>
-            <GridLayout columns="*, auto">
-                <TextField col="0" v-model="passphrase" :secure="!showPassphrase" hint="Enter passphrase" class="setting-input"></TextField>
+            <GridLayout columns="*, auto" verticalAlignment="center">
+                <TextField col="0" v-model="passphrase" :secure="!showPassphrase" hint="Enter passphrase" class="setting-input" style="margin-bottom: 0;"></TextField>
                 <Button col="1" :text="showPassphrase ? 'Hide' : 'Show'" @tap="togglePassphraseVisibility" class="btn btn-secondary toggle-button"></Button>
             </GridLayout>
 
             <Button text="Save Settings" @tap="saveSettings" class="btn btn-primary save-button"></Button>
         </StackLayout>
+        </ScrollView>
     </Page>
 </template>
 
@@ -23,6 +25,7 @@
 import { ref, onMounted } from 'nativescript-vue';
 import { ApplicationSettings } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
+import { PASSPHRASE_KEY, SETTING_DEVICE_NAME } from '../services/settings';
 
 
 const deviceName = ref('');
@@ -32,23 +35,24 @@ const showPassphrase = ref(false);
 const originalPassphrase = ref(''); // To track if passphrase changed
 
 // Application Settings Keys
-const SETTING_DEVICE_NAME = 'settingDeviceName';
-const SETTING_PASSPHRASE = 'settingPassphrase';
 
 onMounted(() => {
     // Load existing settings
     deviceName.value = ApplicationSettings.getString(SETTING_DEVICE_NAME, 'KeyPass');
-    passphrase.value = ApplicationSettings.getString(SETTING_PASSPHRASE, '');
+    passphrase.value = ApplicationSettings.getString(PASSPHRASE_KEY, '');
     originalPassphrase.value = passphrase.value; // Store original passphrase
 });
 
 const togglePassphraseVisibility = () => {
     showPassphrase.value = !showPassphrase.value;
+    if (passphrase.value.length == 0) {
+        passphrase.value = ApplicationSettings.getString(PASSPHRASE_KEY, 'N/A');
+    }
 };
 
 const saveSettings = async () => {
     ApplicationSettings.setString(SETTING_DEVICE_NAME, deviceName.value);
-    ApplicationSettings.setString(SETTING_PASSPHRASE, passphrase.value);
+    ApplicationSettings.setString(PASSPHRASE_KEY, passphrase.value);
 
     // Only update device passphrase if it has changed
     if (passphrase.value !== originalPassphrase.value) {

@@ -2,9 +2,7 @@ import { Bluetooth, Peripheral } from '@nativescript-community/ble';
 import { Dialogs, ApplicationSettings, isAndroid, Device } from '@nativescript/core';
 import { check, request } from '@nativescript-community/perms';
 
-// --- Storage Keys ---
-const LAST_DEVICE_KEY = 'lastDeviceUUID';
-const PASSPHRASE_KEY = 'passphrase';
+import { LAST_DEVICE_KEY, PASSPHRASE_KEY } from './settings';
 
 // --- Nordic UART Service (NUS) ---
 const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
@@ -47,7 +45,7 @@ class DeviceAPI {
 
     startScan(onDeviceDiscovered: (p: Peripheral) => void): Promise<void> {
         return this.bluetooth.startScanning({
-            
+
             seconds: 4,
             onDiscovered: onDeviceDiscovered
         });
@@ -133,6 +131,7 @@ class DeviceAPI {
     }
 
     private async sendCommand(command: object): Promise<string> {
+        console.log(`[DeviceAPI] Sending command: ${JSON.stringify(command)}`);
         if (!this.peripheral) {
             return Promise.reject("Not connected to a device.");
         }
