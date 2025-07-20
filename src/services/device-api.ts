@@ -20,6 +20,26 @@ class DeviceAPI {
     private totalChunks = 0;
     private chunksReceived = 0;
     private isAwaitingHeader = true;
+    private pendingCommandsQueue: Array<() => Promise<string>> = [];
+    private isProcessingCommand = false;
+
+    private async processCommandQueue(): Promise<void> {
+        if (this.isProcessingCommand || this.pendingCommandsQueue.length === 0) {
+            return;
+        }
+
+        this.isProcessingCommand = true;
+        try {
+            const nextCommand = this.pendingCommandsQueue.shift()!;
+            await nextCommand();
+        } finally {
+            this.isProcessingCommand = false;
+            // Process next command if any
+            if (this.pendingCommandsQueue.length > 0) {
+                await this.processCommandQueue();
+            }
+        }
+    }
 
     constructor() {
         this.bluetooth = new Bluetooth();
@@ -131,12 +151,17 @@ class DeviceAPI {
     }
 
     private async sendCommand(command: object): Promise<string> {
-        console.log(`[DeviceAPI] Sending command: ${JSON.stringify(command)}`);
-        if (!this.peripheral) {
-            return Promise.reject("Not connected to a device.");
-        }
 
-        return new Promise(async (resolve, reject) => {
+        return new Promise<string>((resolveQueue, rejectQueue) => {
+            // Create a function that will execute the actual command
+            const executeCommand = async (): Promise<string> => {
+                console.log(`[DeviceAPI] Sending command: ${JSON.stringify(command)}`);
+                if (!this.peripheral) {
+                    throw new Error("Not connected to a device.");
+                }
+
+                return new Promise(async (resolve, reject) => {
+
             this.responseResolver = resolve;
             this.responseRejecter = reject;
 
@@ -192,6 +217,23 @@ class DeviceAPI {
                 characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
                 value: data
             });
+        });
+    }
+
+            // Add the command to the queue
+            this.pendingCommandsQueue.push(async () => {
+                try {
+                    const result = await executeCommand();
+                    resolveQueue(result);
+                    return result;
+                } catch (error) {
+                    rejectQueue(error);
+                    throw error;
+                }
+            });
+
+            // Start processing the queue
+            this.processCommandQueue();
         });
     }
 
