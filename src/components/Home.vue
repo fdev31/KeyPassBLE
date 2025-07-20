@@ -1,11 +1,11 @@
 <template>
-    <Page>
+    <Page @navigatedTo="onNavigatedTo">
         <ActionBar :title="actionBarTitle" class="action-bar">
         </ActionBar>
         <GridLayout rows="auto, *, auto" class="page-container">
 
         <!-- Home View (Disconnected/Connecting/List Modes) -->
-        
+
             <!-- Disconnected Mode -->
             <template v-if="currentMode === 'disconnected' || currentMode === 'connecting'">
                 <GridLayout row="0" columns="*,*" class="button-grid">
@@ -75,7 +75,7 @@ import { Peripheral } from '@nativescript-community/ble';
 import { isAndroid, Device, ApplicationSettings, Frame } from '@nativescript/core';
 import { DeviceAPI } from '../services/device-api';
 import Settings from './Settings.vue';
-import TestPage from './TestPage.vue';
+import PassEditPage from './PassEditPage.vue';
 
 interface PasswordEntry {
     uid: string;
@@ -343,14 +343,21 @@ const startScan = async () => {
 };
 
 const onAddNewPassword = () => {
-    $navigateTo(TestPage);
+    $navigateTo(PassEditPage);
 };
 
 const onSettings = () => {
     $navigateTo(Settings);
 };
 
+const onNavigatedTo = () => {
+    // When navigating back to this page, refresh the password list if we are in list mode.
+    if (currentMode.value === 'list') {
+        loadPasswordList();
+    }
+};
 </script>
+
 
 <style>
     .action-bar { background-color: #4F46E5; color: white; }
