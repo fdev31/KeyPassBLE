@@ -36,3 +36,24 @@ deep-clean:
 # Show logs from the connected device
 log:
     npx nativescript log android
+
+# Setup the project for iOS
+setup-ios:
+    npm install
+    npx nativescript prepare ios
+
+# Build the iOS application
+build-ios:
+    npx nativescript build ios
+
+# Run the app on a connected iOS device or simulator
+run-ios:
+    npx nativescript run ios
+
+# Run the app in debug mode with Safari Web Inspector
+debug-ios:
+    npx nativescript debug ios
+
+# Show logs from the connected iOS device
+log-ios:
+    npx nativescript log ios
