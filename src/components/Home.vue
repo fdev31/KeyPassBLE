@@ -6,15 +6,15 @@
                 <Button col="0" text="Scan for BLE Devices" @tap="startScan" :isEnabled="!isScanning"></Button>
                 <Button col="1" text="List Paired Devices" @tap="listPairedDevices" :isEnabled="!isScanning"></Button>
             </GridLayout>
-            <Label row="1" :text="statusMessage" textWrap="true"></Label>
-            <ListView row="2" for="device in discoveredDevices">
-                <v-template>
-                    <StackLayout>
-                        <Label :text="device.name || 'Unknown Device'"></Label>
-                        <Label :text="device.UUID"></Label>
+            <Label row="1" :text="statusMessage" textWrap="true" class="text-center my-2"></Label>
+            <ScrollView row="2">
+                <StackLayout>
+                    <StackLayout v-for="device in discoveredDevices" :key="device.UUID" class="p-4 border-b-2 border-gray-200">
+                        <Label :text="device.name || 'Unknown Device'" class="text-lg font-bold"></Label>
+                        <Label :text="device.UUID" class="text-sm"></Label>
                     </StackLayout>
-                </v-template>
-            </ListView>
+                </StackLayout>
+            </ScrollView>
         </GridLayout>
     </Page>
 </template>
