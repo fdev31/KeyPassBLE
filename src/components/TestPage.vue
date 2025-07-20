@@ -1,5 +1,6 @@
 <template>
     <Page>
+        <ActionBar title="Test Page" class="action-bar" />
         <StackLayout class="page-container">
             <Label text="This is a test page." class="status-label" />
         </StackLayout>

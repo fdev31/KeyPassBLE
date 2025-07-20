@@ -1,8 +1,11 @@
 <template>
-    <GridLayout rows="auto, *, auto" class="page-container">
+    <Page>
+        <ActionBar :title="actionBarTitle" class="action-bar">
+        </ActionBar>
+        <GridLayout rows="auto, *, auto" class="page-container">
 
         <!-- Home View (Disconnected/Connecting/List Modes) -->
-        <template v-if="currentView === 'home'">
+        
             <!-- Disconnected Mode -->
             <template v-if="currentMode === 'disconnected' || currentMode === 'connecting'">
                 <GridLayout row="0" columns="*,*" class="button-grid">
@@ -61,23 +64,13 @@
                     </GridLayout>
                 </StackLayout>
             </template>
-        </template>
-
-        <!-- Settings View -->
-        <template v-else-if="currentView === 'settings'">
-            <Settings @goBack="goHome" />
-        </template>
-
-        <!-- Test Page View -->
-        <template v-else-if="currentView === 'testPage'">
-            <TestPage @goBack="goHome" />
-        </template>
 
     </GridLayout>
+    </Page>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, computed, watch } from 'nativescript-vue';
+import { ref, onMounted, computed, watch, $navigateTo } from 'nativescript-vue';
 import { Peripheral } from '@nativescript-community/ble';
 import { isAndroid, Device, ApplicationSettings, Frame } from '@nativescript/core';
 import { DeviceAPI } from '../services/device-api';
@@ -121,24 +114,13 @@ const SETTING_END_WITH_RETURN = 'settingEndWithReturn';
 const SETTING_USE_LAYOUT_OVERRIDE = 'settingUseLayoutOverride';
 const SETTING_SELECTED_LAYOUT = 'settingSelectedLayout';
 
-const currentView = ref<'home' | 'settings' | 'testPage'>('home');
-
 const actionBarTitle = computed(() => {
-    switch (currentView.value) {
-        case 'home':
-            switch (currentMode.value) {
-                case 'disconnected':
-                case 'connecting':
-                    return 'KeyPass Connector';
-                case 'list':
-                    return 'Your Passwords';
-                default:
-                    return 'KeyPass';
-            }
-        case 'settings':
-            return 'Settings';
-        case 'testPage':
-            return 'Test Page';
+    switch (currentMode.value) {
+        case 'disconnected':
+        case 'connecting':
+            return 'KeyPass Connector';
+        case 'list':
+            return 'Your Passwords';
         default:
             return 'KeyPass';
     }
@@ -360,16 +342,12 @@ const startScan = async () => {
     }
 };
 
-const goHome = () => {
-    currentView.value = 'home';
-};
-
 const onAddNewPassword = () => {
-    currentView.value = 'testPage';
+    $navigateTo(TestPage);
 };
 
 const onSettings = () => {
-    currentView.value = 'settings';
+    $navigateTo(Settings);
 };
 
 </script>

@@ -1,8 +1,6 @@
 <template>
     <Frame>
-        <Page>
-            <Home />
-        </Page>
+        <Home />
     </Frame>
 </template>
 
