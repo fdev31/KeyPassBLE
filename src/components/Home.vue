@@ -25,32 +25,17 @@
 
 <script lang="ts" setup>
 import { ref, onMounted } from 'nativescript-vue';
-import { Bluetooth, Peripheral } from '@nativescript-community/ble';
-import { isAndroid, Device, ApplicationSettings, Dialogs } from '@nativescript/core';
-import { check, request } from '@nativescript-community/perms';
+import { Peripheral } from '@nativescript-community/ble';
+import { isAndroid, Device, ApplicationSettings } from '@nativescript/core';
+import { DeviceAPI } from '../services/device-api';
 
-// --- Storage Keys ---
-const LAST_DEVICE_KEY = 'lastDeviceUUID';
-const PASSPHRASE_KEY = 'passphrase';
-
-// --- Nordic UART Service (NUS) ---
-const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-const NUS_TX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Write
-const NUS_RX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Notifications
-
-const bluetooth = new Bluetooth();
+const deviceAPI = new DeviceAPI();
 const isScanning = ref(false);
 const discoveredDevices = ref<Partial<Peripheral>[]>([]);
 const statusMessage = ref('App started. Loading...');
 
-// --- State for chunked response handling ---
-let responseBuffer = '';
-let totalChunks = 0;
-let chunksReceived = 0;
-let isAwaitingHeader = true;
-
 onMounted(() => {
-    const lastDeviceUUID = ApplicationSettings.getString(LAST_DEVICE_KEY);
+    const lastDeviceUUID = ApplicationSettings.getString('lastDeviceUUID');
     if (lastDeviceUUID) {
         statusMessage.value = `Found last device. Connecting...`;
         setTimeout(() => connectToDevice({ UUID: lastDeviceUUID, name: 'Last Device' }), 500);
@@ -59,93 +44,10 @@ onMounted(() => {
     }
 });
 
-const processFinalResponse = (response: string) => {
-    console.log(`Processing final response: ${response}`);
-    statusMessage.value = `Device Response: ${response.trim()}`;
-    isAwaitingHeader = true;
-    responseBuffer = '';
-    totalChunks = 0;
-    chunksReceived = 0;
-};
-
-const authenticateDevice = async (peripheral: Peripheral) => {
-    try {
-        let passphrase = ApplicationSettings.getString(PASSPHRASE_KEY);
-        if (!passphrase) {
-            const result = await Dialogs.prompt({
-                title: "Enter Passphrase",
-                message: "Please enter the passphrase for your device.",
-                okButtonText: "Save",
-                cancelButtonText: "Cancel",
-                inputType: "password"
-            });
-
-            if (result.result && result.text) {
-                passphrase = result.text;
-                ApplicationSettings.setString(PASSPHRASE_KEY, passphrase);
-            } else {
-                statusMessage.value = 'Authentication cancelled.';
-                bluetooth.disconnect({ UUID: peripheral.UUID });
-                return;
-            }
-        }
-
-        statusMessage.value = 'Authenticating...';
-        isAwaitingHeader = true;
-        responseBuffer = '';
-        totalChunks = 0;
-        chunksReceived = 0;
-
-        await bluetooth.startNotifying({
-            peripheralUUID: peripheral.UUID,
-            serviceUUID: NUS_SERVICE_UUID,
-            characteristicUUID: NUS_RX_CHARACTERISTIC_UUID,
-            onNotify: ({ value }) => {
-                const chunkText = new TextDecoder().decode(value);
-                if (isAwaitingHeader) {
-                    isAwaitingHeader = false;
-                    const headerParts = chunkText.split(',').map(Number);
-                    if (headerParts.length === 3 && !headerParts.some(isNaN)) {
-                        const [size, numChunks, chunkSize] = headerParts;
-                        totalChunks = numChunks;
-                        chunksReceived = 0;
-                        responseBuffer = '';
-                        statusMessage.value = `Receiving ${numChunks} chunks...`;
-                    } else {
-                        processFinalResponse(chunkText);
-                    }
-                } else {
-                    responseBuffer += chunkText;
-                    chunksReceived++;
-                    statusMessage.value = `Receiving chunk ${chunksReceived} of ${totalChunks}...`;
-                    if (chunksReceived === totalChunks) {
-                        processFinalResponse(responseBuffer);
-                    }
-                }
-            }
-        });
-
-        const command = JSON.stringify({ cmd: "passphrase", p: passphrase });
-        // FIX: Pass the Uint8Array directly, not the .buffer
-        const data = new TextEncoder().encode(command);
-
-        await bluetooth.write({
-            peripheralUUID: peripheral.UUID,
-            serviceUUID: NUS_SERVICE_UUID,
-            characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
-            value: data
-        });
-
-    } catch (err) {
-        console.error(`Authentication failed: ${err}`);
-        statusMessage.value = `Authentication failed: ${err.message}`;
-    }
-};
-
 const connectToDevice = async (device: Partial<Peripheral>) => {
     try {
-        await requestPermissions();
-        const isEnabled = await bluetooth.isBluetoothEnabled();
+        await deviceAPI.requestPermissions();
+        const isEnabled = await deviceAPI.isBluetoothEnabled();
         if (!isEnabled) {
             alert('Bluetooth is not enabled.');
             return;
@@ -153,76 +55,41 @@ const connectToDevice = async (device: Partial<Peripheral>) => {
 
         statusMessage.value = `Connecting to ${device.name || device.UUID}...`;
 
-        await bluetooth.connect({
-            UUID: device.UUID,
-            onConnected: (peripheral: Peripheral) => {
+        await deviceAPI.connect(
+            { UUID: device.UUID },
+            async (peripheral: Peripheral) => {
                 console.log(`Connected to ${peripheral.UUID}`);
                 statusMessage.value = `Connected to ${peripheral.name}!`;
-                ApplicationSettings.setString(LAST_DEVICE_KEY, peripheral.UUID);
-                // Add a small delay before authenticating
-                setTimeout(() => authenticateDevice(peripheral), 500);
+                try {
+                    const authResponse = await deviceAPI.authenticate();
+                    statusMessage.value = `Authentication: ${authResponse}`;
+                } catch (authErr) {
+                    console.error(`Authentication failed: ${authErr}`);
+                    statusMessage.value = `Authentication failed: ${authErr.message}`;
+                }
             },
-            onDisconnected: (peripheral: Peripheral) => {
+            (peripheral: Peripheral) => {
                 console.log(`Disconnected from ${peripheral.UUID}`);
                 statusMessage.value = `Disconnected from ${peripheral.name}.`;
             }
-        });
+        );
     } catch (err) {
         console.error(`Error connecting to device: ${err}`);
         statusMessage.value = `Failed to connect: ${err.message}`;
-        ApplicationSettings.remove(LAST_DEVICE_KEY);
+        ApplicationSettings.remove('lastDeviceUUID');
     }
-};
-
-// --- Other functions (listPairedDevices, startScan, requestPermissions) remain the same ---
-const requestPermissions = async () => {
-    if (!isAndroid) return true;
-    if (parseInt(Device.sdkVersion, 10) >= 31) {
-        const scanResult = await check('bluetoothScan');
-        if (scanResult[0] !== 'authorized') await request('bluetoothScan');
-        const connectResult = await check('bluetoothConnect');
-        if (connectResult[0] !== 'authorized') await request('bluetoothConnect');
-    } else {
-        const locationResult = await check('location');
-        if (locationResult[0] !== 'authorized') await request('location');
-    }
-    return true;
 };
 
 const listPairedDevices = async () => {
-    if (!isAndroid) {
-        alert('This feature is only available on Android.');
-        return;
-    }
     try {
-        await requestPermissions();
-        const isEnabled = await bluetooth.isBluetoothEnabled();
-        if (!isEnabled) {
-            alert('Bluetooth is not enabled.');
-            return;
-        }
-
-        const adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter();
-        if (adapter) {
-            const bondedDevices = adapter.getBondedDevices();
-            if (bondedDevices && bondedDevices.size() > 0) {
-                const devices = [];
-                const iterator = bondedDevices.iterator();
-                while (iterator.hasNext()) {
-                    const device = iterator.next();
-                    devices.push({
-                        name: device.getName(),
-                        UUID: device.getAddress()
-                    });
-                }
-
-                discoveredDevices.value.length = 0;
-                devices.forEach(d => discoveredDevices.value.push(d));
-                statusMessage.value = `Found ${devices.length} paired devices. Tap one to connect.`;
-            } else {
-                statusMessage.value = 'No paired devices found.';
-                discoveredDevices.value = [];
-            }
+        const devices = await deviceAPI.listPairedDevices();
+        if (devices.length > 0) {
+            discoveredDevices.value.length = 0;
+            devices.forEach(d => discoveredDevices.value.push(d));
+            statusMessage.value = `Found ${devices.length} paired devices. Tap one to connect.`;
+        } else {
+            statusMessage.value = 'No paired devices found.';
+            discoveredDevices.value = [];
         }
     } catch (err) {
         console.error('Error listing paired devices:', err);
@@ -231,7 +98,30 @@ const listPairedDevices = async () => {
 };
 
 const startScan = async () => {
-    // This function remains the same
+    isScanning.value = true;
+    discoveredDevices.value = [];
+    statusMessage.value = 'Scanning for devices...';
+    try {
+        await deviceAPI.requestPermissions();
+        const isEnabled = await deviceAPI.isBluetoothEnabled();
+        if (!isEnabled) {
+            alert('Bluetooth is not enabled.');
+            isScanning.value = false;
+            return;
+        }
+        await deviceAPI.startScan((peripheral) => {
+            const existing = discoveredDevices.value.find(d => d.UUID === peripheral.UUID);
+            if (!existing) {
+                discoveredDevices.value.push(peripheral);
+            }
+        });
+        statusMessage.value = `Scan complete. Found ${discoveredDevices.value.length} devices.`;
+    } catch (err) {
+        console.error(`Error during scan: ${err}`);
+        statusMessage.value = `Scan failed: ${err.message}`;
+    } finally {
+        isScanning.value = false;
+    }
 };
 </script>
 
