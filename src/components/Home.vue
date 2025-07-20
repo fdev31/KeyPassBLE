@@ -27,7 +27,7 @@
             <!-- List Mode -->
             <template v-if="currentMode === 'list'">
                 <Label row="0" :text="statusMessage" textWrap="true" class="status-label"></Label>
-                <ScrollView row="1" colSpan="2" class="list-container">
+                <ScrollView row="2" colSpan="2" class="list-container">
                     <StackLayout>
                         <StackLayout v-for="entry in passwordEntries" :key="entry.uid" @tap="onPasswordSelected(entry)" class="list-item">
                             <Label :text="entry.name" class="list-item-name"></Label>
@@ -104,9 +104,8 @@ const loadPasswordList = async () => {
     statusMessage.value = 'Loading passwords...';
     try {
         const response = await deviceAPI.list();
-        console.log("Raw response from deviceAPI.list():", response);
-        const parsedList: PasswordEntry[] = JSON.parse(response);
-        console.log("Parsed list:", parsedList);
+        const parsedResponse = JSON.parse(response);
+        const parsedList: PasswordEntry[] = parsedResponse.passwords;
         passwordEntries.value = parsedList;
         ApplicationSettings.setString('cachedPasswords', JSON.stringify(parsedList));
         statusMessage.value = `Loaded ${parsedList.length} passwords.`;
