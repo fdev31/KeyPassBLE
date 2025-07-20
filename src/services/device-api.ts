@@ -89,6 +89,7 @@ export class DeviceAPI {
             onConnected: (p) => {
                 this.peripheral = p;
                 ApplicationSettings.setString(LAST_DEVICE_KEY, p.UUID);
+                console.log(`[DeviceAPI] Connected and saved last device: ${p.UUID}`);
                 onConnected(p);
             },
             onDisconnected: (p) => {

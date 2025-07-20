@@ -1,10 +1,12 @@
 <template>
-    <Page>
-        <ActionBar :title="actionBarTitle" class="action-bar">
-            <NavigationButton v-if="currentMode === 'list'" text="Back" @tap="disconnectAndGoHome" />
-        </ActionBar>
-        <GridLayout rows="auto, *, auto" class="page-container">
+    <ActionBar :title="actionBarTitle" class="action-bar">
+        <NavigationButton v-if="currentView !== 'home'" text="Back" @tap="goHome" />
+        <NavigationButton v-else-if="currentMode === 'list'" text="Back" @tap="disconnectAndGoHome" />
+    </ActionBar>
+    <GridLayout rows="auto, *, auto" class="page-container">
 
+        <!-- Home View (Disconnected/Connecting/List Modes) -->
+        <template v-if="currentView === 'home'">
             <!-- Disconnected Mode -->
             <template v-if="currentMode === 'disconnected' || currentMode === 'connecting'">
                 <GridLayout row="0" columns="*,*" class="button-grid">
@@ -59,20 +61,32 @@
                     <!-- Action Buttons -->
                     <GridLayout columns="*, *" class="action-buttons-container">
                         <Button col="0" text="+ Add New" @tap="onAddNewPassword" class="btn btn-primary icon-button"></Button>
-                        <Button col="1" text="⚙️ Settings" @tap="onSettings" class="btn btn-secondary icon-button"></Button>
+                        <Button col="1" text="⚙�� Settings" @tap="onSettings" class="btn btn-secondary icon-button"></Button>
                     </GridLayout>
                 </StackLayout>
             </template>
+        </template>
 
-        </GridLayout>
-    </Page>
+        <!-- Settings View -->
+        <template v-else-if="currentView === 'settings'">
+            <Settings @goBack="goHome" />
+        </template>
+
+        <!-- Test Page View -->
+        <template v-else-if="currentView === 'testPage'">
+            <TestPage @goBack="goHome" />
+        </template>
+
+    </GridLayout>
 </template>
 
 <script lang="ts" setup>
 import { ref, onMounted, computed, watch } from 'nativescript-vue';
 import { Peripheral } from '@nativescript-community/ble';
-import { isAndroid, Device, ApplicationSettings } from '@nativescript/core';
+import { isAndroid, Device, ApplicationSettings, Frame } from '@nativescript/core';
 import { DeviceAPI } from '../services/device-api';
+import Settings from './Settings.vue';
+import TestPage from './TestPage.vue';
 
 interface PasswordEntry {
     uid: string;
@@ -111,13 +125,24 @@ const SETTING_END_WITH_RETURN = 'settingEndWithReturn';
 const SETTING_USE_LAYOUT_OVERRIDE = 'settingUseLayoutOverride';
 const SETTING_SELECTED_LAYOUT = 'settingSelectedLayout';
 
+const currentView = ref<'home' | 'settings' | 'testPage'>('home');
+
 const actionBarTitle = computed(() => {
-    switch (currentMode.value) {
-        case 'disconnected':
-        case 'connecting':
-            return 'KeyPass Connector';
-        case 'list':
-            return 'Your Passwords';
+    switch (currentView.value) {
+        case 'home':
+            switch (currentMode.value) {
+                case 'disconnected':
+                case 'connecting':
+                    return 'KeyPass Connector';
+                case 'list':
+                    return 'Your Passwords';
+                default:
+                    return 'KeyPass';
+            }
+        case 'settings':
+            return 'Settings';
+        case 'testPage':
+            return 'Test Page';
         default:
             return 'KeyPass';
     }
@@ -125,6 +150,7 @@ const actionBarTitle = computed(() => {
 
 onMounted(() => {
     const lastDeviceUUID = ApplicationSettings.getString('lastDeviceUUID');
+    console.log(`[Home.vue] onMounted: lastDeviceUUID = ${lastDeviceUUID}`);
     if (lastDeviceUUID) {
         statusMessage.value = `Found last device. Connecting...`;
         currentMode.value = 'connecting';
@@ -338,14 +364,16 @@ const startScan = async () => {
     }
 };
 
+const goHome = () => {
+    currentView.value = 'home';
+};
+
 const onAddNewPassword = () => {
-    alert("Add New Password button pressed!");
-    // TODO: Implement navigation to a new password creation screen
+    currentView.value = 'testPage';
 };
 
 const onSettings = () => {
-    alert("Settings button pressed!");
-    // TODO: Implement navigation to a settings screen
+    currentView.value = 'settings';
 };
 
 </script>
