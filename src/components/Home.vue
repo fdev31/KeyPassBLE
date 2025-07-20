@@ -342,7 +342,17 @@ const startScan = async () => {
 };
 
 const onAddNewPassword = () => {
-    $navigateTo(PassEditPage);
+    $navigateTo(PassEditPage, {
+        context: {
+            propsData: {
+                passwordEntry: {
+                    name: '',
+                    uid: passwordEntries.value.length.toString()
+
+                }
+            }
+        }
+    });
 };
 
 const onEditPassword = (entry: PasswordEntry) => {
