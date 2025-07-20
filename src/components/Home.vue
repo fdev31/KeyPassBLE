@@ -1,8 +1,4 @@
 <template>
-    <ActionBar :title="actionBarTitle" class="action-bar">
-        <NavigationButton v-if="currentView !== 'home'" text="Back" @tap="goHome" />
-        <NavigationButton v-else-if="currentMode === 'list'" text="Back" @tap="disconnectAndGoHome" />
-    </ActionBar>
     <GridLayout rows="auto, *, auto" class="page-container">
 
         <!-- Home View (Disconnected/Connecting/List Modes) -->

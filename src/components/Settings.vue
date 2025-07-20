@@ -1,8 +1,5 @@
 <template>
     <Page>
-        <ActionBar title="Settings" class="action-bar">
-            <NavigationButton text="Back" @tap="goBack" />
-        </ActionBar>
         <StackLayout class="page-container">
             <Label text="Device Name" class="setting-label"></Label>
             <TextField v-model="deviceName" hint="Enter device name" class="setting-input"></TextField>
@@ -19,11 +16,13 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'nativescript-vue';
-import { ApplicationSettings, Frame } from '@nativescript/core';
+import { ref, onMounted, defineEmits } from 'nativescript-vue';
+import { ApplicationSettings } from '@nativescript/core';
 import { DeviceAPI } from '../services/device-api';
 
+const emit = defineEmits(['goBack']);
 const deviceAPI = new DeviceAPI();
+
 
 const deviceName = ref('');
 const passphrase = ref('');
@@ -67,7 +66,7 @@ const saveSettings = async () => {
 };
 
 const goBack = () => {
-    Frame.goBack();
+    emit('goBack');
 };
 </script>
 
