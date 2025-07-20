@@ -9,6 +9,7 @@ const SETTING_DEVICE_NAME = 'settingDeviceName';
 const DEVMODE = true;
 
 export {
+    SETTING_DEVICE_NAME,
     LAST_DEVICE_KEY,
     PASSPHRASE_KEY,
     DEVMODE
