@@ -9,7 +9,7 @@
             <Label row="1" :text="statusMessage" textWrap="true" class="text-center my-2"></Label>
             <ScrollView row="2">
                 <StackLayout>
-                    <StackLayout v-for="device in discoveredDevices" :key="device.UUID" class="p-4 border-b-2 border-gray-200">
+                    <StackLayout v-for="device in discoveredDevices" :key="device.UUID" @tap="connectToDevice(device)" class="p-4 border-b-2 border-gray-200">
                         <Label :text="device.name || 'Unknown Device'" class="text-lg font-bold"></Label>
                         <Label :text="device.UUID" class="text-sm"></Label>
                     </StackLayout>
@@ -48,6 +48,29 @@ const requestPermissions = async () => {
     return true;
 };
 
+const connectToDevice = async (device: Partial<Peripheral>) => {
+    try {
+        statusMessage.value = `Connecting to ${device.name || device.UUID}...`;
+        console.log(`Attempting to connect to ${device.UUID}`);
+
+        await bluetooth.connect({
+            UUID: device.UUID,
+            onConnected: (peripheral: Peripheral) => {
+                console.log(`Connected to ${peripheral.UUID}`);
+                statusMessage.value = `Successfully connected to ${peripheral.name}!`;
+                // You can now interact with the device's services and characteristics
+            },
+            onDisconnected: (peripheral: Peripheral) => {
+                console.log(`Disconnected from ${peripheral.UUID}`);
+                statusMessage.value = `Disconnected from ${peripheral.name}.`;
+            }
+        });
+    } catch (err) {
+        console.error(`Error connecting to device: ${err}`);
+        statusMessage.value = `Failed to connect: ${err.message}`;
+    }
+};
+
 const listPairedDevices = async () => {
     if (!isAndroid) {
         alert('This feature is only available on Android.');
@@ -79,8 +102,7 @@ const listPairedDevices = async () => {
                 discoveredDevices.value.length = 0;
                 devices.forEach(d => discoveredDevices.value.push(d));
 
-                statusMessage.value = `Found ${devices.length} paired devices.`;
-                console.log(`Found ${devices.length} bonded devices.`);
+                statusMessage.value = `Found ${devices.length} paired devices. Tap one to connect.`;
             } else {
                 statusMessage.value = 'No paired devices found.';
                 discoveredDevices.value = [];
@@ -111,7 +133,6 @@ const startScan = async () => {
             seconds: 5,
             onDiscovered: (peripheral: Peripheral) => {
                 totalDiscovered++;
-                console.log(`Discovered peripheral: ${peripheral.name} (${peripheral.UUID}), Data: ${JSON.stringify(peripheral.advertismentData)}`);
                 const services = (peripheral.advertismentData?.services || []).map(s => s.toLowerCase());
                 const hasNusService = services.includes(NUS_SERVICE_UUID);
                 const hasTargetName = peripheral.name === TARGET_DEVICE_NAME || peripheral.localName === TARGET_DEVICE_NAME;
