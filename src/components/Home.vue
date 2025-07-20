@@ -124,14 +124,19 @@ const actionBarTitle = computed(() => {
             return 'KeyPass';
     }
 });
-
-onMounted(() => {
+const reconnectLast = () => {
     const lastDeviceUUID = ApplicationSettings.getString('lastDeviceUUID');
-    console.log(`[Home.vue] onMounted: lastDeviceUUID = ${lastDeviceUUID}`);
+    console.log(`[Home.vue] reconnect: lastDeviceUUID = ${lastDeviceUUID}`);
     if (lastDeviceUUID) {
+        setTimeout(() => connectToDevice({ UUID: lastDeviceUUID, name: 'Last Device' }), 500);
+        return true;
+    }
+    return false;
+}
+onMounted(() => {
+    if (reconnectLast()) {
         statusMessage.value = `Found last device. Connecting...`;
         currentMode.value = 'connecting';
-        setTimeout(() => connectToDevice({ UUID: lastDeviceUUID, name: 'Last Device' }), 500);
     } else {
         statusMessage.value = 'No last device found. Please select one.';
         currentMode.value = 'disconnected';
@@ -305,6 +310,7 @@ const listPairedDevices = async () => {
     try {
         const devices = await deviceAPI.listPairedDevices();
         if (devices.length > 0) {
+            reconnectLast(); // Try to reconnect to last device after listing
             discoveredDevices.value.length = 0;
             devices.forEach(d => discoveredDevices.value.push(d));
             statusMessage.value = `Found ${devices.length} paired devices. Tap one to connect.`;
@@ -337,6 +343,7 @@ const startScan = async () => {
             }
         });
         statusMessage.value = `Scan complete. Found ${discoveredDevices.value.length} devices.`;
+        reconnectLast(); // Try to reconnect to last device after scan
     } catch (err) {
         console.error(`Error during scan: ${err}`);
         statusMessage.value = `Scan failed: ${err.message}`;
