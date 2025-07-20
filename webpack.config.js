@@ -14,7 +14,8 @@ module.exports = (env) => {
       .loader('vue-loader')
       .tap((options) => {
         options.compilerOptions = {
-          isCustomElement: (tag) => tag === 'v-template',
+          ...options.compilerOptions,
+          isCustomElement: (tag) => tag === 'v-template' || tag.startsWith('PullToRefresh'),
         };
         return options;
       });

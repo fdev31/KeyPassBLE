@@ -1,18 +1,21 @@
 <template>
     <Page>
         <ActionBar title="NUS BLE Scanner"></ActionBar>
-        <StackLayout>
-            <Button text="Scan for Nordic UART Devices" @tap="startScan" :isEnabled="!isScanning" class="m-4 px-4 py-2 bg-blue-500 text-white rounded-lg"></Button>
-            <Label :text="statusMessage" textWrap="true" class="text-center my-2 text-gray-500"></Label>
-            <ListView for="device in discoveredDevices" class="border-t border-gray-200">
+        <GridLayout rows="auto, auto, *">
+            <GridLayout row="0" columns="*,*">
+                <Button col="0" text="Scan for BLE Devices" @tap="startScan" :isEnabled="!isScanning"></Button>
+                <Button col="1" text="List Paired Devices" @tap="listPairedDevices" :isEnabled="!isScanning"></Button>
+            </GridLayout>
+            <Label row="1" :text="statusMessage" textWrap="true"></Label>
+            <ListView row="2" for="device in discoveredDevices">
                 <v-template>
-                    <StackLayout class="p-4 border-b border-gray-200">
-                        <Label :text="device.name || 'Unknown Device'" class="text-lg font-bold"></Label>
-                        <Label :text="device.UUID" class="text-sm text-gray-500"></Label>
+                    <StackLayout>
+                        <Label :text="device.name || 'Unknown Device'"></Label>
+                        <Label :text="device.UUID"></Label>
                     </StackLayout>
                 </v-template>
             </ListView>
-        </StackLayout>
+        </GridLayout>
     </Page>
 </template>
 
@@ -28,58 +31,93 @@ const TARGET_DEVICE_NAME = 'KeyPass';
 
 const bluetooth = new Bluetooth();
 const isScanning = ref(false);
-const discoveredDevices = ref<Peripheral[]>([]);
-const statusMessage = ref('Tap the button to start scanning.');
+const discoveredDevices = ref<Partial<Peripheral>[]>([]);
+const statusMessage = ref('Choose a discovery method.');
 
 const requestPermissions = async () => {
-    if (!isAndroid) {
-        return true;
-    }
-
-    if (parseInt(Device.sdkVersion, 10) >= 31) { // Android 12+
+    if (!isAndroid) return true;
+    if (parseInt(Device.sdkVersion, 10) >= 31) {
         const scanResult = await check('bluetoothScan');
         if (scanResult[0] !== 'authorized') await request('bluetoothScan');
-
         const connectResult = await check('bluetoothConnect');
         if (connectResult[0] !== 'authorized') await request('bluetoothConnect');
-
-    } else { // Android 11 and below
+    } else {
         const locationResult = await check('location');
         if (locationResult[0] !== 'authorized') await request('location');
     }
     return true;
 };
 
+const listPairedDevices = async () => {
+    if (!isAndroid) {
+        alert('This feature is only available on Android.');
+        return;
+    }
+    try {
+        await requestPermissions();
+        const isEnabled = await bluetooth.isBluetoothEnabled();
+        if (!isEnabled) {
+            alert('Bluetooth is not enabled.');
+            return;
+        }
+
+        console.log('Getting bonded devices using native Android API...');
+        const adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter();
+        if (adapter) {
+            const bondedDevices = adapter.getBondedDevices();
+            if (bondedDevices && bondedDevices.size() > 0) {
+                const devices = [];
+                const iterator = bondedDevices.iterator();
+                while (iterator.hasNext()) {
+                    const device = iterator.next();
+                    devices.push({
+                        name: device.getName(),
+                        UUID: device.getAddress()
+                    });
+                }
+                
+                discoveredDevices.value.length = 0;
+                devices.forEach(d => discoveredDevices.value.push(d));
+
+                statusMessage.value = `Found ${devices.length} paired devices.`;
+                console.log(`Found ${devices.length} bonded devices.`);
+            } else {
+                statusMessage.value = 'No paired devices found.';
+                discoveredDevices.value = [];
+            }
+        }
+    } catch (err) {
+        console.error('Error listing paired devices:', err);
+        alert('Error listing paired devices: ' + err.message);
+    }
+};
+
 const startScan = async () => {
     try {
         await requestPermissions();
-
         const isEnabled = await bluetooth.isBluetoothEnabled();
         if (!isEnabled) {
-            alert('Bluetooth is not enabled. Please enable it.');
+            alert('Bluetooth is not enabled.');
             return;
         }
 
         discoveredDevices.value = [];
         isScanning.value = true;
-        statusMessage.value = 'Scanning for devices...';
-
+        statusMessage.value = 'Scanning for advertising devices...';
         let totalDiscovered = 0;
 
         await bluetooth.startScanning({
-            serviceUUIDs: [], // Scan for all devices
+            serviceUUIDs: [],
             seconds: 5,
             onDiscovered: (peripheral: Peripheral) => {
                 totalDiscovered++;
                 console.log(`Discovered peripheral: ${peripheral.name} (${peripheral.UUID}), Data: ${JSON.stringify(peripheral.advertismentData)}`);
-
                 const services = (peripheral.advertismentData?.services || []).map(s => s.toLowerCase());
                 const hasNusService = services.includes(NUS_SERVICE_UUID);
                 const hasTargetName = peripheral.name === TARGET_DEVICE_NAME || peripheral.localName === TARGET_DEVICE_NAME;
 
                 if (hasNusService || hasTargetName) {
                     if (!discoveredDevices.value.some(d => d.UUID === peripheral.UUID)) {
-                        console.log(`MATCH FOUND: ${peripheral.name}`);
                         discoveredDevices.value.push(peripheral);
                     }
                 }
@@ -88,16 +126,11 @@ const startScan = async () => {
 
         isScanning.value = false;
         statusMessage.value = `Scan complete. Found ${totalDiscovered} total devices and ${discoveredDevices.value.length} matching devices.`;
-
     } catch (err) {
         isScanning.value = false;
         statusMessage.value = 'Error while scanning.';
         console.error('Error while scanning for BLE devices:', err);
-        alert({
-            title: 'Scanning Error',
-            message: err.message,
-            okButtonText: 'OK',
-        });
+        alert({ title: 'Scanning Error', message: err.message, okButtonText: 'OK' });
     }
 };
 </script>
