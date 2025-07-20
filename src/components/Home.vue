@@ -24,6 +24,7 @@ import { check, request } from '@nativescript-community/perms';
 
 // Nordic UART Service (NUS) UUID
 const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const TARGET_DEVICE_NAME = 'KeyPass';
 
 const bluetooth = new Bluetooth();
 const isScanning = ref(false);
@@ -36,22 +37,15 @@ const requestPermissions = async () => {
     }
 
     if (parseInt(Device.sdkVersion, 10) >= 31) { // Android 12+
-        // Request permissions one by one to avoid the array conversion error
         const scanResult = await check('bluetoothScan');
-        if (scanResult[0] !== 'authorized') {
-            await request('bluetoothScan');
-        }
+        if (scanResult[0] !== 'authorized') await request('bluetoothScan');
 
         const connectResult = await check('bluetoothConnect');
-        if (connectResult[0] !== 'authorized') {
-            await request('bluetoothConnect');
-        }
+        if (connectResult[0] !== 'authorized') await request('bluetoothConnect');
 
     } else { // Android 11 and below
         const locationResult = await check('location');
-        if (locationResult[0] !== 'authorized') {
-            await request('location');
-        }
+        if (locationResult[0] !== 'authorized') await request('location');
     }
     return true;
 };
@@ -70,14 +64,22 @@ const startScan = async () => {
         isScanning.value = true;
         statusMessage.value = 'Scanning for devices...';
 
+        let totalDiscovered = 0;
+
         await bluetooth.startScanning({
-            serviceUUIDs: [], // Use an empty array to avoid a potential plugin crash
+            serviceUUIDs: [], // Scan for all devices
             seconds: 5,
             onDiscovered: (peripheral: Peripheral) => {
-                // Manually filter for the NUS service UUID in the advertisement data
-                const services = peripheral.advertismentData?.services || [];
-                if (services.includes(NUS_SERVICE_UUID)) {
+                totalDiscovered++;
+                console.log(`Discovered peripheral: ${peripheral.name} (${peripheral.UUID}), Data: ${JSON.stringify(peripheral.advertismentData)}`);
+
+                const services = (peripheral.advertismentData?.services || []).map(s => s.toLowerCase());
+                const hasNusService = services.includes(NUS_SERVICE_UUID);
+                const hasTargetName = peripheral.name === TARGET_DEVICE_NAME || peripheral.localName === TARGET_DEVICE_NAME;
+
+                if (hasNusService || hasTargetName) {
                     if (!discoveredDevices.value.some(d => d.UUID === peripheral.UUID)) {
+                        console.log(`MATCH FOUND: ${peripheral.name}`);
                         discoveredDevices.value.push(peripheral);
                     }
                 }
@@ -85,7 +87,7 @@ const startScan = async () => {
         });
 
         isScanning.value = false;
-        statusMessage.value = `Scan complete. Found ${discoveredDevices.value.length} NUS devices.`;
+        statusMessage.value = `Scan complete. Found ${totalDiscovered} total devices and ${discoveredDevices.value.length} matching devices.`;
 
     } catch (err) {
         isScanning.value = false;
