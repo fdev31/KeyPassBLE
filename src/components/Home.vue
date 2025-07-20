@@ -77,6 +77,13 @@ const discoveredDevices = ref<Partial<Peripheral>[]>([]);
 const statusMessage = ref('App started. Loading...');
 const currentMode = ref<'disconnected' | 'connecting' | 'list'>('disconnected');
 const passwordEntries = ref<PasswordEntry[]>([]);
+const selectedPasswordEntry = ref<PasswordEntry | null>(null);
+
+// Reconnection Logic
+const isReconnecting = ref(false);
+const reconnectAttempts = ref(0);
+const maxReconnectAttempts = 5; // Max attempts before giving up
+const reconnectDelayMs = 5000; // 5 seconds delay between attempts
 
 // Advanced Options
 const showAdvancedOptions = ref(false);
@@ -158,6 +165,8 @@ const disconnectAndGoHome = () => {
     statusMessage.value = 'Disconnected. Please select a device.';
     discoveredDevices.value = [];
     selectedPasswordEntry.value = null; // Clear selected password on disconnect
+    isReconnecting.value = false; // Reset reconnection state
+    reconnectAttempts.value = 0; // Reset reconnection attempts
 };
 
 const loadPasswordList = async () => {
@@ -202,7 +211,19 @@ const typeSelectedPassword = async () => {
     }
 };
 
-const connectToDevice = async (device: Partial<Peripheral>) => {
+const attemptReconnect = (device: Partial<Peripheral>) => {
+    if (reconnectAttempts.value < maxReconnectAttempts) {
+        reconnectAttempts.value++;
+        isReconnecting.value = true;
+        statusMessage.value = `Connection lost. Attempting to reconnect (${reconnectAttempts.value}/${maxReconnectAttempts})...`;
+        setTimeout(() => connectToDevice(device, true), reconnectDelayMs);
+    } else {
+        statusMessage.value = `Failed to reconnect after ${maxReconnectAttempts} attempts. Disconnecting.`;
+        disconnectAndGoHome();
+    }
+};
+
+const connectToDevice = async (device: Partial<Peripheral>, isReconnect: boolean = false) => {
     try {
         await deviceAPI.requestPermissions();
         const isEnabled = await deviceAPI.isBluetoothEnabled();
@@ -220,6 +241,8 @@ const connectToDevice = async (device: Partial<Peripheral>) => {
             async (peripheral: Peripheral) => {
                 console.log(`Connected to ${peripheral.UUID}`);
                 statusMessage.value = `Connected to ${peripheral.name}!`;
+                isReconnecting.value = false; // Reset reconnection state on successful connection
+                reconnectAttempts.value = 0; // Reset attempts
                 try {
                     const authResponse = await deviceAPI.authenticate();
                     statusMessage.value = `Authentication: ${authResponse}`;
@@ -234,14 +257,32 @@ const connectToDevice = async (device: Partial<Peripheral>) => {
             (peripheral: Peripheral) => {
                 console.log(`Disconnected from ${peripheral.UUID}`);
                 statusMessage.value = `Disconnected from ${peripheral.name}.`;
-                disconnectAndGoHome();
+                // Only attempt reconnect if it was not a user-initiated disconnect
+                if (currentMode.value === 'list') { // Assuming 'list' mode means we were actively connected
+                    attemptReconnect(peripheral);
+                } else {
+                    disconnectAndGoHome();
+                }
             }
         );
     } catch (err) {
-        console.error(`Error connecting to device: ${err}`);
-        statusMessage.value = `Failed to connect: ${err.message}`;
-        ApplicationSettings.remove('lastDeviceUUID');
-        currentMode.value = 'disconnected';
+        console.error(`Error connecting to device:`, err);
+        console.error(`Type of error: ${typeof err}`);
+        statusMessage.value = `Failed to connect: ${err ? err.message : 'Unknown error'}`;
+        if (!isReconnect) { // Only remove last device if it's not a reconnection attempt
+            ApplicationSettings.remove('lastDeviceUUID');
+            // If it's an initial connection attempt and it fails, go back to disconnected mode
+            currentMode.value = 'disconnected';
+            isReconnecting.value = false; // Ensure reconnection state is reset on hard failure
+            reconnectAttempts.value = 0; // Reset attempts
+        } else if (currentMode.value === 'list') { // If it's a reconnection attempt and fails, try again
+            attemptReconnect(device);
+        } else {
+            // If it's a reconnection attempt but not in list mode (e.g., failed initial connect and then tried reconnecting)
+            currentMode.value = 'disconnected';
+            isReconnecting.value = false; // Ensure reconnection state is reset on hard failure
+            reconnectAttempts.value = 0; // Reset attempts
+        }
     }
 };
 
