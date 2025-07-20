@@ -32,6 +32,8 @@ import { $navigateBack } from 'nativescript-vue';
 import { deviceAPI } from '../services/device-api';
 import { NavigatedData } from '@nativescript/core';
 
+import { passwordStore } from '../services/store';
+
 const name = ref('');
 const password = ref('');
 const showPassword = ref(false);
@@ -84,6 +86,13 @@ const togglePasswordVisibility = () => {
 };
 
 const savePassword = async () => {
+    const addToList = () => {
+        passwordStore.addOrUpdate({
+          uid: uid.value,
+          name: name.value,
+          layout: selectedLayout.value,
+        });
+    }
     if (isEditMode.value) {
         // Edit existing password
         if (!name.value) {
@@ -93,6 +102,7 @@ const savePassword = async () => {
         try {
             await deviceAPI.editPass(parseInt(uid.value), name.value, password.value || undefined, selectedLayout.value);
             alert('Password updated successfully!');
+            addToList();
             $navigateBack();
         } catch (error) {
             console.error("Failed to update password:", error);
@@ -109,6 +119,7 @@ const savePassword = async () => {
             // This assumes the device firmware handles a null/zero ID as a "new" command.
             await deviceAPI.editPass(null, name.value, password.value, selectedLayout.value);
             alert('Password saved successfully!');
+            addToList();
             $navigateBack();
         } catch (error) {
             console.error("Failed to save password:", error);

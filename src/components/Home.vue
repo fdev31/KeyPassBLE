@@ -32,10 +32,10 @@
                 <!-- Password List -->
                 <ScrollView row="1" class="list-container">
                     <StackLayout>
-                        <StackLayout v-for="entry in passwordEntries" :key="entry.uid" @tap="onPasswordSelected(entry)" @longPress="onEditPassword(entry)" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
+                        <StackLayout v-for="entry in passwordStore.entries" :key="entry.uid" @tap="onPasswordSelected(entry)" @longPress="onEditPassword(entry)" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
                             <Label :text="entry.name" class="list-item-name"></Label>
                         </StackLayout>
-                        <Label v-if="passwordEntries.length === 0" text="No passwords found." class="status-label"></Label>
+                        <Label v-if="passwordStore.entries.length === 0" text="No passwords found." class="status-label"></Label>
                     </StackLayout>
                 </ScrollView>
 
@@ -86,7 +86,7 @@ const isScanning = ref(false);
 const discoveredDevices = ref<Partial<Peripheral>[]>([]);
 const statusMessage = ref('App started. Loading...');
 const currentMode = ref<'disconnected' | 'connecting' | 'list'>('disconnected');
-const passwordEntries = ref<PasswordEntry[]>([]);
+import { passwordStore } from '../services/store';
 const selectedPasswordEntry = ref<PasswordEntry | null>(null);
 
 // Reconnection Logic
@@ -140,7 +140,7 @@ onMounted(() => {
     const cachedPasswords = ApplicationSettings.getString('cachedPasswords');
     if (cachedPasswords) {
         try {
-            passwordEntries.value = JSON.parse(cachedPasswords);
+            passwordStore.entriesRef.value = JSON.parse(cachedPasswords);
         } catch (e) {
             console.error("Failed to parse cached passwords:", e);
             ApplicationSettings.remove('cachedPasswords');
@@ -181,12 +181,16 @@ const disconnectAndGoHome = () => {
 };
 
 const loadPasswordList = async () => {
+    if (passwordStore.entries.length > 0) {
+        statusMessage.value = `Using cached passwords (${passwordStore.entries.length} entries).`;
+        return; // Use cached passwords if available
+    }
     statusMessage.value = 'Loading passwords...';
     try {
         const response = await deviceAPI.list();
         const parsedResponse = JSON.parse(response);
         const parsedList: PasswordEntry[] = parsedResponse.passwords;
-        passwordEntries.value = parsedList;
+        passwordStore.entriesRef.value = parsedList;
         ApplicationSettings.setString('cachedPasswords', JSON.stringify(parsedList));
         statusMessage.value = `Loaded ${parsedList.length} passwords.`;
     } catch (err) {
@@ -347,7 +351,7 @@ const onAddNewPassword = () => {
             propsData: {
                 passwordEntry: {
                     name: '',
-                    uid: passwordEntries.value.length.toString()
+                    uid: passwordStore.entries.length.toString()
 
                 }
             }
