@@ -27,9 +27,28 @@
             <!-- List Mode -->
             <template v-if="currentMode === 'list'">
                 <Label row="0" :text="statusMessage" textWrap="true" class="status-label"></Label>
-                <ScrollView row="2" colSpan="2" class="list-container">
+
+                <!-- Advanced Options -->
+                <StackLayout row="1" class="advanced-options-container">
+                    <Button text="Toggle Advanced Options" @tap="showAdvancedOptions = !showAdvancedOptions" class="btn btn-secondary"></Button>
+                    <StackLayout v-if="showAdvancedOptions" class="advanced-options-content">
+                        <Label text="End with Return Key" class="option-label"></Label>
+                        <Switch v-model="endWithReturn" class="option-switch"></Switch>
+
+                        <Label text="Use Layout Override" class="option-label"></Label>
+                        <Switch v-model="useLayoutOverride" class="option-switch"></Switch>
+
+                        <Label text="Keyboard Layout" class="option-label"></Label>
+                        <SegmentedBar v-model="selectedLayout" :isEnabled="useLayoutOverride">
+                            <SegmentedBarItem v-for="layout in LAYOUT_OPTIONS" :key="layout.value" :title="layout.label"></SegmentedBarItem>
+                        </SegmentedBar>
+                    </StackLayout>
+                </StackLayout>
+
+                <!-- Password List -->
+                <ScrollView row="2" class="list-container">
                     <StackLayout>
-                        <StackLayout v-for="entry in passwordEntries" :key="entry.uid" @tap="onPasswordSelected(entry)" class="list-item">
+                        <StackLayout v-for="entry in passwordEntries" :key="entry.uid" @tap="onPasswordSelected(entry)" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
                             <Label :text="entry.name" class="list-item-name"></Label>
                         </StackLayout>
                         <Label v-if="passwordEntries.length === 0" text="No passwords found." class="status-label"></Label>
@@ -42,7 +61,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, computed } from 'nativescript-vue';
+import { ref, onMounted, computed, watch } from 'nativescript-vue';
 import { Peripheral } from '@nativescript-community/ble';
 import { isAndroid, Device, ApplicationSettings } from '@nativescript/core';
 import { DeviceAPI } from '../services/device-api';
@@ -58,6 +77,24 @@ const discoveredDevices = ref<Partial<Peripheral>[]>([]);
 const statusMessage = ref('App started. Loading...');
 const currentMode = ref<'disconnected' | 'connecting' | 'list'>('disconnected');
 const passwordEntries = ref<PasswordEntry[]>([]);
+
+// Advanced Options
+const showAdvancedOptions = ref(false);
+const endWithReturn = ref(true); // Default to true
+const useLayoutOverride = ref(false); // Default to false
+const selectedLayout = ref(0); // Default to FR (0)
+
+const LAYOUT_OPTIONS = [
+    { label: 'Bitlocker', value: -1 },
+    { label: 'FR', value: 0 },
+    { label: 'US', value: 1 },
+    // Add more layouts as needed
+];
+
+// Application Settings Keys
+const SETTING_END_WITH_RETURN = 'settingEndWithReturn';
+const SETTING_USE_LAYOUT_OVERRIDE = 'settingUseLayoutOverride';
+const SETTING_SELECTED_LAYOUT = 'settingSelectedLayout';
 
 const actionBarTitle = computed(() => {
     switch (currentMode.value) {
@@ -91,6 +128,28 @@ onMounted(() => {
             ApplicationSettings.remove('cachedPasswords');
         }
     }
+
+    // Load advanced settings
+    const savedEndWithReturn = ApplicationSettings.getBoolean(SETTING_END_WITH_RETURN, true);
+    endWithReturn.value = savedEndWithReturn;
+
+    const savedUseLayoutOverride = ApplicationSettings.getBoolean(SETTING_USE_LAYOUT_OVERRIDE, false);
+    useLayoutOverride.value = savedUseLayoutOverride;
+
+    const savedSelectedLayout = ApplicationSettings.getNumber(SETTING_SELECTED_LAYOUT, 0);
+    selectedLayout.value = savedSelectedLayout;
+});
+
+watch(endWithReturn, (newValue) => {
+    ApplicationSettings.setBoolean(SETTING_END_WITH_RETURN, newValue);
+});
+
+watch(useLayoutOverride, (newValue) => {
+    ApplicationSettings.setBoolean(SETTING_USE_LAYOUT_OVERRIDE, newValue);
+});
+
+watch(selectedLayout, (newValue) => {
+    ApplicationSettings.setNumber(SETTING_SELECTED_LAYOUT, newValue);
 });
 
 const disconnectAndGoHome = () => {
@@ -98,6 +157,7 @@ const disconnectAndGoHome = () => {
     currentMode.value = 'disconnected';
     statusMessage.value = 'Disconnected. Please select a device.';
     discoveredDevices.value = [];
+    selectedPasswordEntry.value = null; // Clear selected password on disconnect
 };
 
 const loadPasswordList = async () => {
@@ -115,9 +175,31 @@ const loadPasswordList = async () => {
     }
 };
 
-const onPasswordSelected = (entry: PasswordEntry) => {
-    statusMessage.value = `Selected password: ${entry.name} (UID: ${entry.uid})`;
-    // In a real app, you'd navigate to a detail view or perform an action here
+const onPasswordSelected = async (entry: PasswordEntry) => {
+    selectedPasswordEntry.value = entry;
+    statusMessage.value = `Selected password: ${entry.name} (UID: ${entry.uid}). Typing...`;
+    await typeSelectedPassword();
+};
+
+const typeSelectedPassword = async () => {
+    if (!selectedPasswordEntry.value) {
+        alert("No password selected.");
+        return;
+    }
+
+    statusMessage.value = `Typing password: ${selectedPasswordEntry.value.name}...`;
+    try {
+        const layoutToUse = useLayoutOverride.value ? selectedLayout.value : undefined;
+        const response = await deviceAPI.typePass(
+            selectedPasswordEntry.value.uid,
+            layoutToUse,
+            endWithReturn.value
+        );
+        statusMessage.value = `Password typed: ${response}`;
+    } catch (err) {
+        console.error(`Failed to type password: ${err}`);
+        statusMessage.value = `Failed to type password: ${err.message}`;
+    }
 };
 
 const connectToDevice = async (device: Partial<Peripheral>) => {
@@ -220,4 +302,10 @@ const startScan = async () => {
     .list-item { padding: 16; border-bottom-width: 1; border-bottom-color: #E5E7EB; }
     .list-item-name { font-size: 18; font-weight: bold; color: #111827; }
     .list-item-uuid { font-size: 14; color: #6B7280; }
+    .list-item.selected { background-color: #E0E7FF; }
+    .type-button { margin-bottom: 16; }
+    .advanced-options-container { margin-top: 16; padding: 16; border-width: 1; border-color: #E5E7EB; border-radius: 8; }
+    .advanced-options-content { margin-top: 16; }
+    .option-label { font-size: 16; font-weight: bold; margin-bottom: 8; color: #111827; }
+    .option-switch { margin-bottom: 16; }
 </style>
