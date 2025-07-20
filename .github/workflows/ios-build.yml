@@ -19,3 +19,8 @@ jobs:
       run: npm install
     - name: Build iOS
       run: npx nativescript build ios
+    - name: Upload iOS Build
+      uses: actions/upload-artifact@v3
+      with:
+        name: ios-app
+        path: platforms/ios/build/Debug-iphonesimulator/KeyPassBLE.app
