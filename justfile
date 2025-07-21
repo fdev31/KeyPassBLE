@@ -1,6 +1,9 @@
 # Default command, runs the app
 default: run
 
+check:
+    npx tsc
+
 # Setup the project for the first time or after a clean
 setup:
     npm install

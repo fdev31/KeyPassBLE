@@ -20,6 +20,14 @@
             <Label text="Backup and Restore" class="setting-label"></Label>
             <StackLayout>
                 <Button text="Backup" @tap="backup" class="btn btn-secondary backup-button"></Button>
+                <TextView
+                    v-model="restoreData"
+                    hint="Paste backup data here for restore..."
+                    class="setting-input"
+                    :height="isRestoreDataFocused || restoreData.length > 0 ? 120 : 50"
+                    @focus="isRestoreDataFocused = true"
+                    @blur="isRestoreDataFocused = false"
+                ></TextView>
                 <Button text="Restore" @tap="restore" class="btn btn-secondary"></Button>
             </StackLayout>
         </StackLayout>
@@ -29,7 +37,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted } from 'nativescript-vue';
-import { ApplicationSettings, Dialogs } from '@nativescript/core';
+import { ApplicationSettings } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
 import { PASSPHRASE_KEY, SETTING_DEVICE_NAME } from '../services/settings';
 import * as Clipboard from 'nativescript-clipboard';
@@ -38,6 +46,8 @@ import * as Clipboard from 'nativescript-clipboard';
 const deviceName = ref('');
 const passphrase = ref('');
 const showPassphrase = ref(false);
+const restoreData = ref('');
+const isRestoreDataFocused = ref(false);
 
 const originalPassphrase = ref(''); // To track if passphrase changed
 
@@ -91,9 +101,14 @@ import { eventBus } from '../services/event-bus';
 
 const restore = async () => {
     try {
-        const dumpData = await Clipboard.getText();
+        let dumpData = restoreData.value.trim();
+
         if (!dumpData) {
-            alert('Clipboard is empty. Copy backup data to clipboard first.');
+            dumpData = await Clipboard.getText();
+        }
+
+        if (!dumpData) {
+            alert('Clipboard is empty and no data in text area. Copy backup data to clipboard or paste in text area first.');
             return;
         }
         await deviceAPI.restore(dumpData);
