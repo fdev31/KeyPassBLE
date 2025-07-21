@@ -16,6 +16,11 @@
             </GridLayout>
 
             <Button text="Save Settings" @tap="saveSettings" class="btn btn-primary save-button"></Button>
+
+            <GridLayout columns="*, *" rows="auto" class="backup-restore-buttons">
+                <Button text="Backup" @tap="backup" class="btn btn-secondary"></Button>
+                <Button text="Restore" @tap="restore" class="btn btn-secondary"></Button>
+            </GridLayout>
         </StackLayout>
         </ScrollView>
     </Page>
@@ -23,9 +28,10 @@
 
 <script lang="ts" setup>
 import { ref, onMounted } from 'nativescript-vue';
-import { ApplicationSettings } from '@nativescript/core';
+import { ApplicationSettings, Dialogs } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
 import { PASSPHRASE_KEY, SETTING_DEVICE_NAME } from '../services/settings';
+import * as Clipboard from 'nativescript-clipboard';
 
 
 const deviceName = ref('');
@@ -68,11 +74,42 @@ const saveSettings = async () => {
         alert('Settings saved!');
     }
 };
+
+const backup = async () => {
+    try {
+        const dumpData = await deviceAPI.dump();
+        await Clipboard.setText(dumpData);
+        alert('Backup data copied to clipboard!');
+    } catch (error) {
+        console.error("Backup failed:", error);
+        alert(`Backup failed: ${error.message || error}`);
+    }
+};
+
+const restore = async () => {
+    try {
+        const dumpData = await Clipboard.getText();
+        if (!dumpData) {
+            alert('Clipboard is empty. Copy backup data to clipboard first.');
+            return;
+        }
+        await deviceAPI.restore(dumpData);
+        alert('Restore successful!');
+    } catch (error) {
+        console.error("Restore failed:", error);
+        alert(`Restore failed: ${error.message || error}`);
+    }
+};
 </script>
 
 <style scoped>
 .page-container {
     padding: 16;
+}
+
+.backup-restore-buttons {
+    margin-top: 16;
+    grid-gap: 8;
 }
 
 .action-bar {
