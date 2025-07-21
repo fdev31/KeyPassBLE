@@ -361,7 +361,7 @@ const onAddNewPassword = () => {
             propsData: {
                 passwordEntry: {
                     name: '',
-                    layout: -1,
+                    layout: 0,
                     uid: passwordStore.entries.length.toString()
                 }
             }
