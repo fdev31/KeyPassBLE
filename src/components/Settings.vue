@@ -87,6 +87,8 @@ const backup = async () => {
     }
 };
 
+import { eventBus } from '../services/event-bus';
+
 const restore = async () => {
     try {
         const dumpData = await Clipboard.getText();
@@ -96,6 +98,7 @@ const restore = async () => {
         }
         await deviceAPI.restore(dumpData);
         alert('Restore successful!');
+        eventBus.notify({ eventName: 'list-needs-refresh' });
     } catch (error) {
         console.error("Restore failed:", error);
         alert(`Restore failed: ${error.message || error}`);

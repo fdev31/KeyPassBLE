@@ -133,6 +133,8 @@ const reconnectLast = () => {
     }
     return false;
 }
+import { eventBus } from '../services/event-bus';
+
 onMounted(() => {
     if (reconnectLast()) {
         statusMessage.value = `Found last device. Connecting...`;
@@ -161,6 +163,12 @@ onMounted(() => {
 
     const savedSelectedLayout = ApplicationSettings.getNumber(SETTING_SELECTED_LAYOUT, 0);
     selectedLayout.value = savedSelectedLayout;
+
+    eventBus.on('list-needs-refresh', () => {
+        setTimeout(() => {
+            loadPasswordList(true);
+        }, 500);
+    });
 });
 
 watch(endWithReturn, (newValue) => {
