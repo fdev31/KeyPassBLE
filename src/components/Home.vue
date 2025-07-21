@@ -140,7 +140,7 @@ onMounted(() => {
         statusMessage.value = `Found last device. Connecting...`;
         currentMode.value = 'connecting';
     } else {
-        statusMessage.value = 'No last device found. Please select one.';
+        statusMessage.value = 'Last device not found. Please connect or select another.';
         currentMode.value = 'disconnected';
     }
     // Load cached passwords on startup

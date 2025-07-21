@@ -10,9 +10,10 @@
 
                 <Label text="Password" class="setting-label"></Label>
                 <Label v-if="isEditMode" text="(Leave blank to keep current password)" class="setting-label" style="font-size: 12; margin-top: -8; margin-bottom: 8;"></Label>
-                <GridLayout columns="*, auto" verticalAlignment="center">
+                <GridLayout columns="*, auto, auto" verticalAlignment="center">
                     <TextField col="0" v-model="password" :secure="!showPassword" hint="Enter password" class="setting-input" style="margin-bottom: 0;"></TextField>
                     <Button col="1" :text="showPassword ? 'Hide' : 'Show'" @tap="togglePasswordVisibility" class="btn btn-secondary toggle-button"></Button>
+                    <Button col="2" text="🎲" @tap="generatePassword" class="btn btn-secondary toggle-button"></Button>
                 </GridLayout>
 
                 <Label text="Keyboard Layout" class="setting-label"></Label>
@@ -82,6 +83,20 @@ const togglePasswordVisibility = () => {
 }
         )
     }
+};
+
+const generatePassword = () => {
+    const length = password.value.length;
+    if (length === 0) {
+        alert("Please enter a password to set the length for generation.");
+        return;
+    }
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{};:,.<>/?";
+    let newPassword = "";
+    for (let i = 0, n = charset.length; i < length; ++i) {
+        newPassword += charset.charAt(Math.floor(Math.random() * n));
+    }
+    password.value = newPassword;
 };
 
 const savePassword = async () => {
