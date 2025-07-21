@@ -17,9 +17,7 @@
                 </GridLayout>
 
                 <Label text="Keyboard Layout" class="setting-label"></Label>
-                <SegmentedBar v-model="selectedLayout">
-                    <SegmentedBarItem v-for="layout in LAYOUT_OPTIONS" :key="layout.value" :title="layout.label"></SegmentedBarItem>
-                </SegmentedBar>
+                <ListPicker :items="layoutLabels" v-model="selectedLayout" class="list-picker" />
 
                 <Button text="Save" @tap="savePassword" class="btn btn-primary save-button"></Button>
             </StackLayout>
@@ -28,7 +26,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'nativescript-vue';
+import { ref, computed } from 'nativescript-vue';
 import { $navigateBack } from 'nativescript-vue';
 import { deviceAPI } from '../services/device-api';
 import { NavigatedData } from '@nativescript/core';
@@ -47,6 +45,8 @@ const LAYOUT_OPTIONS = [
     { label: 'FR', value: 0 },
     { label: 'US', value: 1 },
 ];
+
+const layoutLabels = computed(() => LAYOUT_OPTIONS.map(opt => opt.label));
 
 const onNavigatingTo = (event: NavigatedData) => {
     if (event.isBack) {
@@ -197,5 +197,9 @@ const savePassword = async () => {
 
 .save-button {
     margin-top: 24;
+}
+
+.list-picker {
+    height: 120;
 }
 </style>

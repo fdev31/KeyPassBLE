@@ -40,27 +40,11 @@
                 </ScrollView>
 
                 <StackLayout row="2">
-                    <!-- Advanced Options -->
-                    <StackLayout class="advanced-options-container">
-                        <Button text="Toggle Advanced Options" @tap="showAdvancedOptions = !showAdvancedOptions" class="btn btn-secondary"></Button>
-                        <StackLayout :class="['advanced-options-content', { 'advanced-options-content-hidden': !showAdvancedOptions }]">
-                            <Label text="End with Return Key" class="option-label"></Label>
-                            <Switch v-model="endWithReturn" class="option-switch"></Switch>
-
-                            <Label text="Use Layout Override" class="option-label"></Label>
-                            <Switch v-model="useLayoutOverride" class="option-switch"></Switch>
-
-                            <Label text="Keyboard Layout" class="option-label"></Label>
-                            <SegmentedBar v-model="selectedLayout" :isEnabled="useLayoutOverride">
-                                <SegmentedBarItem v-for="layout in LAYOUT_OPTIONS" :key="layout.value" :title="layout.label"></SegmentedBarItem>
-                            </SegmentedBar>
-                        </StackLayout>
-                    </StackLayout>
-
                     <!-- Action Buttons -->
-                    <GridLayout columns="*, *" class="action-buttons-container">
+                    <GridLayout columns="*, *, *" class="action-buttons-container">
                         <Button col="0" text="+ Add New" @tap="onAddNewPassword" class="btn btn-primary icon-button"></Button>
-                        <Button col="1" text="⚙�� Settings" @tap="onSettings" class="btn btn-secondary icon-button"></Button>
+                        <Button col="1" text="🎚️" @tap="openAdvancedOptions" class="btn btn-secondary icon-button"></Button>
+                        <Button col="2" text="⚙�� Settings" @tap="onSettings" class="btn btn-secondary icon-button"></Button>
                     </GridLayout>
                 </StackLayout>
             </template>
@@ -70,12 +54,13 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, computed, watch, $navigateTo } from 'nativescript-vue';
+import { ref, onMounted, computed, watch, $navigateTo, $showModal } from 'nativescript-vue';
 import { Peripheral } from '@nativescript-community/ble';
 import { isAndroid, Device, ApplicationSettings, Frame } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
 import Settings from './Settings.vue';
 import PassEditPage from './PassEditPage.vue';
+import AdvancedOptions from './AdvancedOptions.vue';
 import { passwordStore } from '../services/store';
 
 interface PasswordEntry {
@@ -96,7 +81,6 @@ const maxReconnectAttempts = 5; // Max attempts before giving up
 const reconnectDelayMs = 5000; // 5 seconds delay between attempts
 
 // Advanced Options
-const showAdvancedOptions = ref(false);
 const endWithReturn = ref(true); // Default to true
 const useLayoutOverride = ref(false); // Default to false
 const selectedLayout = ref(0); // Default to FR (0)
@@ -407,6 +391,22 @@ const onSettings = () => {
     });
 };
 
+const openAdvancedOptions = async () => {
+    const result = await $showModal(AdvancedOptions, {
+        props: {
+            endWithReturn: endWithReturn.value,
+            useLayoutOverride: useLayoutOverride.value,
+            selectedLayout: selectedLayout.value
+        }
+    });
+
+    if (result) {
+        endWithReturn.value = result.endWithReturn;
+        useLayoutOverride.value = result.useLayoutOverride;
+        selectedLayout.value = result.selectedLayout;
+    }
+};
+
 const onNavigatedTo = () => {
     // When navigating back to this page, refresh the password list if we are in list mode.
     if (currentMode.value === 'list') {
@@ -437,21 +437,6 @@ const onNavigatedTo = () => {
     .list-item-uuid { font-size: 14; color: #6B7280; }
     .list-item.selected { background-color: #E0E7FF; }
     .type-button { margin-bottom: 16; }
-    .advanced-options-container { margin-top: 8; padding: 0; }
-    .advanced-options-content {
-        margin-top: 16;
-        transition: all 0.3s ease-in-out;
-        transform: scaleY(1);
-        transform-origin: top;
-        opacity: 1;
-    }
-    .advanced-options-content-hidden {
-        transform: scaleY(0);
-        transform-origin: top;
-        opacity: 0;
-        height: 0;
-        margin-top: 0;
-    }
     .option-label { font-size: 16; font-weight: bold; margin-bottom: 8; color: #111827; }
     .option-switch { margin-bottom: 16; }
     .action-buttons-container { margin-top: 16; margin-bottom: 16; }
@@ -459,5 +444,12 @@ const onNavigatedTo = () => {
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
+    }
+    .slide-enter-active, .slide-leave-active {
+        transition: all 0.3s ease;
+    }
+    .slide-enter-from, .slide-leave-to {
+        transform: translateY(-20px);
+        opacity: 0;
     }
 </style>
