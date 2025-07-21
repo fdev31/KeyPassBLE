@@ -43,7 +43,7 @@
                     <!-- Advanced Options -->
                     <StackLayout class="advanced-options-container">
                         <Button text="Toggle Advanced Options" @tap="showAdvancedOptions = !showAdvancedOptions" class="btn btn-secondary"></Button>
-                        <StackLayout v-if="showAdvancedOptions" class="advanced-options-content">
+                        <StackLayout :class="['advanced-options-content', { 'advanced-options-content-hidden': !showAdvancedOptions }]">
                             <Label text="End with Return Key" class="option-label"></Label>
                             <Switch v-model="endWithReturn" class="option-switch"></Switch>
 
@@ -365,6 +365,11 @@ const startScan = async () => {
 
 const onAddNewPassword = () => {
     $navigateTo(PassEditPage, {
+        transition: {
+            name: 'slideRight',
+            duration: 150,
+            curve: 'easeOut'
+        },
         context: {
             propsData: {
                 passwordEntry: {
@@ -379,6 +384,11 @@ const onAddNewPassword = () => {
 
 const onEditPassword = (entry: PasswordEntry) => {
     $navigateTo(PassEditPage, {
+        transition: {
+            name: 'slideRight',
+            duration: 150,
+            curve: 'easeOut'
+        },
         context: {
             propsData: {
                 passwordEntry: entry
@@ -388,7 +398,13 @@ const onEditPassword = (entry: PasswordEntry) => {
 };
 
 const onSettings = () => {
-    $navigateTo(Settings);
+    $navigateTo(Settings, {
+        transition: {
+            name: 'slideLeft',
+            duration: 150,
+            curve: 'easeOut'
+        }
+    });
 };
 
 const onNavigatedTo = () => {
@@ -409,15 +425,39 @@ const onNavigatedTo = () => {
     .btn-secondary { background-color: #6B7280; color: white; margin-left: 8; }
     .status-label { font-size: 16; text-align: center; color: #6B7280; margin-bottom: 16; }
     .list-container { border-width: 1; border-color: #E5E7EB; border-radius: 8; }
-    .list-item { padding: 16; border-bottom-width: 1; border-bottom-color: #E5E7EB; }
+    .list-item {
+        padding: 16;
+        border-bottom-width: 1;
+        border-bottom-color: #E5E7EB;
+        animation-name: fadeIn;
+        animation-duration: 0.5s;
+        animation-fill-mode: forwards;
+    }
     .list-item-name { font-size: 18; font-weight: bold; color: #111827; }
     .list-item-uuid { font-size: 14; color: #6B7280; }
     .list-item.selected { background-color: #E0E7FF; }
     .type-button { margin-bottom: 16; }
     .advanced-options-container { margin-top: 8; padding: 0; }
-    .advanced-options-content { margin-top: 16; }
+    .advanced-options-content {
+        margin-top: 16;
+        transition: all 0.3s ease-in-out;
+        transform: scaleY(1);
+        transform-origin: top;
+        opacity: 1;
+    }
+    .advanced-options-content-hidden {
+        transform: scaleY(0);
+        transform-origin: top;
+        opacity: 0;
+        height: 0;
+        margin-top: 0;
+    }
     .option-label { font-size: 16; font-weight: bold; margin-bottom: 8; color: #111827; }
     .option-switch { margin-bottom: 16; }
     .action-buttons-container { margin-top: 16; margin-bottom: 16; }
     .icon-button { font-size: 24; padding: 8; width: 50; height: 50; border-radius: 25; text-align: center; vertical-align: center; }
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
 </style>
