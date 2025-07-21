@@ -17,10 +17,11 @@
 
             <Button text="Save Settings" @tap="saveSettings" class="btn btn-primary save-button"></Button>
 
-            <GridLayout columns="*, *" rows="auto" class="backup-restore-buttons">
-                <Button text="Backup" @tap="backup" class="btn btn-secondary"></Button>
+            <Label text="Backup and Restore" class="setting-label"></Label>
+            <StackLayout>
+                <Button text="Backup" @tap="backup" class="btn btn-secondary backup-button"></Button>
                 <Button text="Restore" @tap="restore" class="btn btn-secondary"></Button>
-            </GridLayout>
+            </StackLayout>
         </StackLayout>
         </ScrollView>
     </Page>
@@ -107,9 +108,8 @@ const restore = async () => {
     padding: 16;
 }
 
-.backup-restore-buttons {
-    margin-top: 16;
-    grid-gap: 8;
+.backup-button {
+    margin-bottom: 8;
 }
 
 .action-bar {
