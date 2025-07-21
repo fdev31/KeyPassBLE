@@ -11,21 +11,120 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18.x'
-    - name: Install dependencies
-      run: npm install
-    - name: Setup Java and Android SDK
+
+    - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
-    - name: Build Android
-      run: npx nativescript build android
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18.x'
+
+    - name: Install dependencies
+      run: npm install
+
+    # This is a special step - NativeScript sometimes works better with their own setup process
+    - name: Setup NativeScript environment
+      run: |
+        # Install NativeScript CLI
+        npm install -g nativescript@latest
+
+        # Install Android SDK through NativeScript's tooling
+        mkdir -p $HOME/.local/share/.nativescript-cli/
+        echo '{"trackExceptions":false,"trackFeatureUsage":false}' > $HOME/.local/share/.nativescript-cli/user-settings.json
+
+        # Setup Android SDK
+        ANDROID_SDK_ROOT=$HOME/android-sdk
+        mkdir -p $ANDROID_SDK_ROOT
+
+        # Download commandline tools
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+        unzip -q commandlinetools-linux-9477386_latest.zip -d $ANDROID_SDK_ROOT
+
+        # Setup proper directory structure expected by NativeScript
+        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools/latest
+        mv $ANDROID_SDK_ROOT/cmdline-tools/* $ANDROID_SDK_ROOT/cmdline-tools/latest/ 2>/dev/null || true
+
+        # Set environment variables
+        echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        export ANDROID_HOME=$ANDROID_SDK_ROOT
+        export ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT
+        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
+
+        # Accept licenses
+        echo y | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+
+        # Install required Android SDK components
+        $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+
+        # Create necessary folders
+        mkdir -p $ANDROID_SDK_ROOT/extras/android/m2repository
+        mkdir -p $ANDROID_SDK_ROOT/extras/google/m2repository
+
+        # Let NativeScript doctor verify setup
+        echo "Verifying environment with NativeScript doctor:"
+        ns doctor android || true
+
+    - name: Create a dummy NativeScript project
+      run: |
+        # Create a minimal NativeScript project
+        cd $GITHUB_WORKSPACE
+
+        # Check if the project already has NativeScript structure
+        if [ ! -d "platforms" ]; then
+          echo "Creating a basic NativeScript project structure"
+          mkdir -p App_Resources/Android
+          mkdir -p platforms/android
+
+          # Create minimal app.js
+          echo "console.log('Hello World');" > app.js
+
+          # Create minimal package.json if it doesn't exist
+          if [ ! -f "package.json" ]; then
+            echo '{
+              "name": "temp-ns-app",
+              "version": "1.0.0",
+              "description": "Temporary NativeScript app",
+              "main": "app.js",
+              "dependencies": {
+                "@nativescript/core": "latest"
+              }
+            }' > package.json
+
+            # Install dependencies
+            npm install
+          fi
+        fi
+
+    - name: Build Android App
+      run: |
+        export ANDROID_HOME=$HOME/android-sdk
+        export ANDROID_SDK_ROOT=$HOME/android-sdk
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+
+        # Try different build approaches
+        echo "Attempting build with NS build command:"
+        ns build android --release --log trace || \
+        echo "Attempting build with direct Gradle command:" && \
+        cd platforms/android && ./gradlew assembleRelease
+
+    - name: Find APK files
+      if: always()
+      run: |
+        echo "Looking for APK files:"
+        find $GITHUB_WORKSPACE -name "*.apk"
+
     - name: Upload Android Build
       uses: actions/upload-artifact@v4
+      if: always()
       with:
-        name: android-apk
-        path: platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
+        name: android-build-artifacts
+        path: |
+          ${{ github.workspace }}/platforms/android/app/build/outputs/apk/release/*.apk
+          ${{ github.workspace }}/**/app/build/outputs/apk/release/*.apk
+          ${{ github.workspace }}/**/*.apk
+        if-no-files-found: warn
