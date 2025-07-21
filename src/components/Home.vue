@@ -42,9 +42,9 @@
                 <StackLayout row="2">
                     <!-- Action Buttons -->
                     <GridLayout columns="*, *, *" class="action-buttons-container">
-                        <Button col="0" text="+ Add New" @tap="onAddNewPassword" class="btn btn-primary icon-button"></Button>
-                        <Button col="1" text="🎚️" @tap="openAdvancedOptions" class="btn btn-secondary icon-button"></Button>
-                        <Button col="2" text="⚙�� Settings" @tap="onSettings" class="btn btn-secondary icon-button"></Button>
+                        <Button col="0" text="➕" @tap="onAddNewPassword" class="btn btn-secondary icon-button"></Button>
+                        <Button col="1" text="📎" @tap="openAdvancedOptions" class="btn btn-primary icon-button"></Button>
+                        <Button col="2" text="✅" @tap="onSettings" class="btn btn-secondary icon-button"></Button>
                     </GridLayout>
                 </StackLayout>
             </template>
@@ -422,7 +422,7 @@ const onNavigatedTo = () => {
     .button-grid { margin-bottom: 16; }
     .btn { border-radius: 8; font-size: 16; padding: 12; }
     .btn-primary { background-color: #4F46E5; color: white; margin-right: 8; }
-    .btn-secondary { background-color: #6B7280; color: white; margin-left: 8; }
+    .btn-secondary { background-color: #b2b2b0; color: white; margin-left: 8; }
     .status-label { font-size: 16; text-align: center; color: #6B7280; margin-bottom: 16; }
     .list-container { border-width: 1; border-color: #E5E7EB; border-radius: 8; }
     .list-item {
