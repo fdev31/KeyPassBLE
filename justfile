@@ -42,13 +42,29 @@ setup-ios:
     npm install
     npx nativescript prepare ios
 
+# Build the Android application in release mode
+build-release:
+    npx nativescript build android --release
+
+# Run the Android application in release mode
+run-release:
+    npx nativescript run android --release
+
 # Build the iOS application
 build-ios:
     npx nativescript build ios
 
+# Build the iOS application in release mode
+build-ios-release:
+    npx nativescript build ios --release
+
 # Run the app on a connected iOS device or simulator
 run-ios:
     npx nativescript run ios
+
+# Run the iOS application in release mode
+run-ios-release:
+    npx nativescript run ios --release
 
 # Run the app in debug mode with Safari Web Inspector
 debug-ios:
