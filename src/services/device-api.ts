@@ -9,6 +9,11 @@ const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const NUS_TX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Write
 const NUS_RX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Notifications
 
+interface Command {
+    cmd: string;
+    [key: string]: any;
+}
+
 class DeviceAPI {
     private bluetooth: Bluetooth;
     private peripheral: Peripheral | null = null;
@@ -162,63 +167,60 @@ class DeviceAPI {
 
                 return new Promise(async (resolve, reject) => {
 
-            this.responseResolver = resolve;
-            this.responseRejecter = reject;
+                    this.responseResolver = resolve;
+                    this.responseRejecter = reject;
 
-            this.isAwaitingHeader = true;
-            this.responseBuffer = '';
-            this.totalChunks = 0;
-            this.chunksReceived = 0;
+                    this.isAwaitingHeader = true;
+                    this.responseBuffer = '';
+                    this.totalChunks = 0;
+                    this.chunksReceived = 0;
 
-            await this.bluetooth.startNotifying({
-                peripheralUUID: this.peripheral!.UUID,
-                serviceUUID: NUS_SERVICE_UUID,
-                characteristicUUID: NUS_RX_CHARACTERISTIC_UUID,
-                onNotify: ({ value }) => {
-                    const chunkText = new TextDecoder().decode(value);
-                    if (this.isAwaitingHeader) {
-                        const headerMatch = chunkText.match(/^(\d+),(\d+),(\d+)\n$/);
-                        if (headerMatch) {
-                            this.isAwaitingHeader = false;
-                            const [, totalSize, numChunks, chunkSize] = headerMatch.map(Number);
-                            this.totalChunks = numChunks;
-                            this.responseBuffer = chunkText.substring(headerMatch[0].length); // Start buffer after header
-                            this.chunksReceived = this.responseBuffer.length > 0 ? 1 : 0; // If there's data after header, it's the first chunk
+                    await this.bluetooth.startNotifying({
+                        peripheralUUID: this.peripheral!.UUID,
+                        serviceUUID: NUS_SERVICE_UUID,
+                        characteristicUUID: NUS_RX_CHARACTERISTIC_UUID,
+                        onNotify: ({ value }) => {
+                            const chunkText = new TextDecoder().decode(value);
+                            if (this.isAwaitingHeader) {
+                                const headerMatch = chunkText.match(/^(\d+),(\d+),(\d+)\n$/);
+                                if (headerMatch) {
+                                    this.isAwaitingHeader = false;
+                                    const [, totalSize, numChunks, chunkSize] = headerMatch.map(Number);
+                                    this.totalChunks = numChunks;
+                                    this.responseBuffer = chunkText.substring(headerMatch[0].length); // Start buffer after header
+                                    this.chunksReceived = this.responseBuffer.length > 0 ? 1 : 0; // If there's data after header, it's the first chunk
 
-                            if (this.totalChunks === 1 && this.chunksReceived === 1) { // Handle single chunk response with header
-                                this.processFinalResponse(this.responseBuffer);
+                                    if (this.totalChunks === 1 && this.chunksReceived === 1) { // Handle single chunk response with header
+                                        this.processFinalResponse(this.responseBuffer);
+                                    }
+                                } else {
+                                    // If no header, assume it's a single-chunk response without a header
+                                    this.isAwaitingHeader = false; // No longer awaiting header
+                                    this.processFinalResponse(chunkText);
+                                }
+                            } else {
+                                this.responseBuffer += chunkText;
+                                this.chunksReceived++;
+                                if (this.chunksReceived >= this.totalChunks) { // Use >= to be safe
+                                    this.processFinalResponse(this.responseBuffer);
+                                }
                             }
-                        } else {
-                            // If no header, assume it's a single-chunk response without a header
-                            this.isAwaitingHeader = false; // No longer awaiting header
-                            this.processFinalResponse(chunkText);
                         }
+                    });
+
+                    const cmdString = JSON.stringify(command);
+                    if ((command as Command).cmd === 'restore') {
+                        await this.chunkAndSend(cmdString);
                     } else {
-                        this.responseBuffer += chunkText;
-                        this.chunksReceived++;
-                        if (this.chunksReceived >= this.totalChunks) { // Use >= to be safe
-                            this.processFinalResponse(this.responseBuffer);
-                        }
+                        await this.bluetooth.write({
+                            peripheralUUID: this.peripheral!.UUID,
+                            serviceUUID: NUS_SERVICE_UUID,
+                            characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
+                            value: new TextEncoder().encode(cmdString)
+                        });
                     }
-                }
-            });
-
-            const cmdString = JSON.stringify(command);
-            const data = new TextEncoder().encode(cmdString);
-
-            if (!this.peripheral) {
-                reject("Not connected to a device.");
-                return;
+                });
             }
-
-            await this.bluetooth.write({
-                peripheralUUID: this.peripheral!.UUID,
-                serviceUUID: NUS_SERVICE_UUID,
-                characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
-                value: data
-            });
-        });
-    }
 
             // Add the command to the queue
             this.pendingCommandsQueue.push(async () => {
@@ -235,6 +237,28 @@ class DeviceAPI {
             // Start processing the queue
             this.processCommandQueue();
         });
+    }
+
+    private async chunkAndSend(data: string): Promise<void> {
+        const mtu = this.peripheral?.mtu || 20; // Default to 20 if MTU is not available
+        const chunkSize = mtu - 3; // 3 bytes for BLE headers
+
+        for (let i = 0; i < data.length; i += chunkSize) {
+            const chunk = data.substring(i, i + chunkSize);
+            const dataChunk = new TextEncoder().encode(chunk);
+
+            await this.bluetooth.write({
+                peripheralUUID: this.peripheral!.UUID,
+                serviceUUID: NUS_SERVICE_UUID,
+                characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
+                value: dataChunk
+            });
+            await this.sleep(10); // Small delay to prevent overwhelming the device
+        }
+    }
+
+    private sleep(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     private processFinalResponse(response: string) {
