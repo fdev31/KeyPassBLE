@@ -36,6 +36,7 @@ class DeviceAPI {
         this.isProcessingCommand = true;
         try {
             const nextCommand = this.pendingCommandsQueue.shift()!;
+            await this.sleep(200); // Small delay to prevent overwhelming the device
             await nextCommand();
         } finally {
             this.isProcessingCommand = false;
@@ -253,7 +254,7 @@ class DeviceAPI {
                 characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
                 value: dataChunk
             });
-            await this.sleep(10); // Small delay to prevent overwhelming the device
+            await this.sleep(50); // Small delay to prevent overwhelming the device
         }
     }
 
