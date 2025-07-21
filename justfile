@@ -1,6 +1,9 @@
 # Default command, runs the app
 default: run
 
+# icon:
+#     ./node_modules/.bin/tns resources generate icons /tmp/Untitled.png
+
 check:
     npx tsc
 
