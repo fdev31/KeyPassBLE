@@ -267,7 +267,10 @@ const connectToDevice = async (device: Partial<Peripheral>, isReconnect: boolean
                     const authResponse = await deviceAPI.authenticate();
                     statusMessage.value = `Authentication: ${authResponse}`;
                     currentMode.value = 'list';
-                    loadPasswordList(true);
+                    setTimeout(() => {
+                        statusMessage.value = 'Loading password list...';
+                        loadPasswordList(true);
+                    }, 200);
                 } catch (authErr) {
                     console.error(`Authentication failed: ${authErr}`);
                     statusMessage.value = `Authentication failed: ${authErr.message}`;
