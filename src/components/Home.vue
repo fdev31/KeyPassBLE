@@ -220,7 +220,7 @@ const loadPasswordList = async (forced) => {
     statusMessage.value = 'Loading passwords...';
     try {
         const response = await deviceAPI.list();
-        const parsedResponse = JSON.parse(response);
+        const parsedResponse = response;
         const parsedList: PasswordEntry[] = parsedResponse.passwords;
         passwordStore.entriesRef.value = parsedList;
         ApplicationSettings.setString('cachedPasswords', JSON.stringify(parsedList));

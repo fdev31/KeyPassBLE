@@ -19,6 +19,8 @@ export class BLEBackend {
     private peripheral: Peripheral | null = null;
     private responseResolver: ((value: string | PromiseLike<string>) => void) | null = null;
     private responseRejecter: ((reason?: any) => void) | null = null;
+    private responseTimeoutId: any | null = null;
+    private _currentResponseType: 'json' | 'text' = 'json';
 
     // --- State for chunked response handling ---
     private responseBuffer = '';
@@ -129,7 +131,8 @@ export class BLEBackend {
         }
     }
 
-    sendCommand(command: object, timeout = 10000): Promise<string> {
+    sendCommand(command: object, timeout = 10000, responseType: 'json' | 'text' = 'json'): Promise<string> {
+        this._currentResponseType = responseType;
 
         return new Promise<string>((resolveQueue, rejectQueue) => {
             // Create a function that will execute the actual command
@@ -201,7 +204,12 @@ export class BLEBackend {
     }
 
     public handleNotification(value: ArrayBuffer) {
+        if (this.responseTimeoutId) {
+            clearTimeout(this.responseTimeoutId);
+        }
+
         const chunkText = new TextDecoder().decode(value);
+
         if (this.isAwaitingHeader) {
             const headerMatch = chunkText.match(/^(\d+),(\d+),(\d+)\n/);
             if (headerMatch) {
@@ -210,21 +218,22 @@ export class BLEBackend {
                 this.totalChunks = numChunks;
                 this.responseBuffer = chunkText.substring(headerMatch[0].length);
                 this.chunksReceived = 1;
-
-                if (this.totalChunks === 1) {
-                    this.processFinalResponse(this.responseBuffer);
-                }
             } else {
+                // This case should ideally not happen if the device always sends a header.
+                // If it does, we treat the first chunk as data and proceed.
                 this.isAwaitingHeader = false;
-                this.processFinalResponse(chunkText);
+                this.responseBuffer += chunkText;
+                this.chunksReceived = 1;
             }
         } else {
             this.responseBuffer += chunkText;
             this.chunksReceived++;
-            if (this.chunksReceived >= this.totalChunks) {
-                this.processFinalResponse(this.responseBuffer);
-            }
         }
+
+        // Set a timeout to process the response if no more chunks arrive
+        this.responseTimeoutId = setTimeout(() => {
+            this.processFinalResponse(this.responseBuffer);
+        }, 500); // 500ms timeout
     }
 
     private async chunkAndSend(data: string): Promise<void> {
@@ -250,8 +259,28 @@ export class BLEBackend {
     }
 
     private processFinalResponse(response: string) {
+        if (this.responseTimeoutId) {
+            clearTimeout(this.responseTimeoutId);
+            this.responseTimeoutId = null;
+        }
+        console.log(`[BLEBackend] Final response before trim: "${response}"`);
+        const trimmedResponse = response.trim();
+        console.log(`[BLEBackend] Final response after trim: "${trimmedResponse}"`);
         if (this.responseResolver) {
-            this.responseResolver(response.trim());
+            const trimmedResponse = response.trim();
+            if (this._currentResponseType === 'json') {
+                try {
+                    const jsonResponse = JSON.parse(trimmedResponse);
+                    this.responseResolver(jsonResponse);
+                } catch (e: any) {
+                    console.error(`[BLEBackend] Error parsing final JSON response: ${e.message}. Raw response: "${trimmedResponse}"`);
+                    if (this.responseRejecter) {
+                        this.responseRejecter(new Error(`Failed to parse JSON response: ${e.message}`));
+                    }
+                }
+            } else { // responseType is 'text'
+                this.responseResolver(trimmedResponse);
+            }
         }
         this.resetResponseHandling();
     }
@@ -263,5 +292,7 @@ export class BLEBackend {
         this.chunksReceived = 0;
         this.responseResolver = null;
         this.responseRejecter = null;
+        this.responseTimeoutId = null;
+        this._currentResponseType = 'json';
     }
 }

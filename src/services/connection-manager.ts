@@ -88,18 +88,47 @@ class ConnectionManager extends Observable {
     private onDisconnected(peripheral: Peripheral) {
         this.setConnectedPeripheral(null);
         this.setState(ConnectionState.DISCONNECTED);
+        console.log(`[ConnectionManager] Disconnected from ${peripheral.UUID}. Attempting to reconnect...`);
+        this.reconnect();
     }
 
     private async reconnect() {
         if (!this._lastConnectedDeviceUUID) {
             return;
         }
-        // This is a simplified reconnect. A more robust implementation
-        // would involve scanning for the specific device UUID.
-        // For now, we assume the device is advertising and connectable.
+
+        this.setState(ConnectionState.CONNECTING);
         console.log(`[ConnectionManager] Attempting to reconnect to ${this._lastConnectedDeviceUUID}`);
-        // This is a placeholder for the actual reconnect logic,
-        // which would likely involve scanning and then connecting.
+
+        let foundAndConnected = false;
+        try {
+            await deviceAPI.startScan(async (peripheral) => {
+                if (peripheral.UUID === this._lastConnectedDeviceUUID) {
+                    console.log(`[ConnectionManager] Found last connected device: ${peripheral.name || peripheral.UUID}`);
+                    try {
+                        await deviceAPI.connect(
+                            peripheral,
+                            (p) => this.onConnected(p),
+                            (p) => this.onDisconnected(p)
+                        );
+                        foundAndConnected = true;
+                    } catch (error) {
+                        console.error(`[ConnectionManager] Reconnection error: ${error}`);
+                        this.setState(ConnectionState.DISCONNECTED);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error(`[ConnectionManager] Scan for reconnect error: ${error}`);
+            this.setState(ConnectionState.DISCONNECTED);
+        } finally {
+            // The scan automatically stops after the duration set in ble-backend.ts (4 seconds)
+            // If we haven't connected by now, set state to disconnected.
+            if (!foundAndConnected) {
+                console.log(`[ConnectionManager] Could not reconnect to ${this._lastConnectedDeviceUUID} within scan period.`);
+                this.setState(ConnectionState.DISCONNECTED);
+            }
+        }
     }
 }
 

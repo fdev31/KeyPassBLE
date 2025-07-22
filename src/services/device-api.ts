@@ -97,7 +97,7 @@ class DeviceAPI {
     }
 
     dump(): Promise<string> {
-        return this.backend.sendCommand({ cmd: "dump" });
+        return this.backend.sendCommand({ cmd: "dump" }, 10000, 'text');
     }
 
     restore(data: string): Promise<string> {
