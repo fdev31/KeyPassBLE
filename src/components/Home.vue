@@ -141,7 +141,7 @@ onMounted(() => {
     eventBus.on('list-needs-refresh', () => {
         setTimeout(() => {
             loadPasswordList(true);
-        }, 1000);
+        }, 100);
     });
 });
 

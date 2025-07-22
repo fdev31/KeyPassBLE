@@ -21,6 +21,7 @@ export class BLEBackend {
     private responseRejecter: ((reason?: any) => void) | null = null;
     private responseTimeoutId: any | null = null;
     private _currentResponseType: 'json' | 'text' = 'json';
+    private _isRestoring: boolean = false;
 
     // --- State for chunked response handling ---
     private responseBuffer = '';
@@ -162,17 +163,26 @@ export class BLEBackend {
                     this.chunksReceived = 0;
 
                     try {
-                        await this.bluetooth.startNotifying({
-                            peripheralUUID: this.peripheral!.UUID,
-                            serviceUUID: NUS_SERVICE_UUID,
-                            characteristicUUID: NUS_RX_CHARACTERISTIC_UUID,
-                            onNotify: ({ value }) => this.handleNotification(value)
-                        });
-
                         const cmdString = JSON.stringify(command);
                         if ((command as Command).cmd === 'restore') {
+                            this._isRestoring = true;
                             await this.chunkAndSend(cmdString);
+                            this._isRestoring = false;
+
+                            // Reset state and start timeout for the final response after restore chunks are sent
+                            this.resetResponseHandling(); // This also clears responseTimeoutId
+                            this.responseTimeoutId = setTimeout(() => {
+                                console.log(`[BLEBackend] Restore response timeout reached. Processing final response.`);
+                                this.processFinalResponse(this.responseBuffer);
+                            }, 10000); // Use a longer timeout for restore if needed
+
                         } else {
+                            await this.bluetooth.startNotifying({
+                                peripheralUUID: this.peripheral!.UUID,
+                                serviceUUID: NUS_SERVICE_UUID,
+                                characteristicUUID: NUS_RX_CHARACTERISTIC_UUID,
+                                onNotify: ({ value }) => this.handleNotification(value)
+                            });
                             await this.bluetooth.write({
                                 peripheralUUID: this.peripheral!.UUID,
                                 serviceUUID: NUS_SERVICE_UUID,
@@ -204,6 +214,11 @@ export class BLEBackend {
     }
 
     public handleNotification(value: ArrayBuffer) {
+        if (this._isRestoring) {
+            console.log(`[BLEBackend] Ignoring notification during restore operation.`);
+            return;
+        }
+
         if (this.responseTimeoutId) {
             clearTimeout(this.responseTimeoutId);
         }
@@ -233,7 +248,7 @@ export class BLEBackend {
         // Set a timeout to process the response if no more chunks arrive
         this.responseTimeoutId = setTimeout(() => {
             this.processFinalResponse(this.responseBuffer);
-        }, 500); // 500ms timeout
+        }, 200);
     }
 
     private async chunkAndSend(data: string): Promise<void> {
@@ -250,7 +265,6 @@ export class BLEBackend {
                 characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
                 value: dataChunk
             });
-            await this.sleep(50); // Small delay to prevent overwhelming the device
         }
     }
 
