@@ -191,7 +191,7 @@ const authenticateAndLoadList = async () => {
         setTimeout(() => {
             statusMessage.value = 'Loading password list...';
             loadPasswordList(true);
-        }, 200);
+        }, 600);
     } catch (authErr) {
         console.error(`Authentication failed: ${authErr}`);
         statusMessage.value = `Authentication failed: ${authErr.message}`;
