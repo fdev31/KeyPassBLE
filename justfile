@@ -7,6 +7,9 @@ default: run
 check:
     npx tsc
 
+test:
+    npm test
+
 # Setup the project for the first time or after a clean
 setup:
     npm install

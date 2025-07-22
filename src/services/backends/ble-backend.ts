@@ -129,7 +129,7 @@ export class BLEBackend {
         }
     }
 
-    sendCommand(command: object): Promise<string> {
+    sendCommand(command: object, timeout = 10000): Promise<string> {
 
         return new Promise<string>((resolveQueue, rejectQueue) => {
             // Create a function that will execute the actual command
@@ -140,58 +140,45 @@ export class BLEBackend {
                 }
 
                 return new Promise(async (resolve, reject) => {
+                    const timeoutId = setTimeout(() => {
+                        reject(new Error(`Command timed out after ${timeout}ms`));
+                    }, timeout);
 
-                    this.responseResolver = resolve;
-                    this.responseRejecter = reject;
+                    this.responseResolver = (value) => {
+                        clearTimeout(timeoutId);
+                        resolve(value);
+                    };
+                    this.responseRejecter = (reason) => {
+                        clearTimeout(timeoutId);
+                        reject(reason);
+                    };
 
                     this.isAwaitingHeader = true;
                     this.responseBuffer = '';
                     this.totalChunks = 0;
                     this.chunksReceived = 0;
 
-                    await this.bluetooth.startNotifying({
-                        peripheralUUID: this.peripheral!.UUID,
-                        serviceUUID: NUS_SERVICE_UUID,
-                        characteristicUUID: NUS_RX_CHARACTERISTIC_UUID,
-                        onNotify: ({ value }) => {
-                            const chunkText = new TextDecoder().decode(value);
-                            if (this.isAwaitingHeader) {
-                                const headerMatch = chunkText.match(/^(\d+),(\d+),(\d+)\n$/);
-                                if (headerMatch) {
-                                    this.isAwaitingHeader = false;
-                                    const [, totalSize, numChunks, chunkSize] = headerMatch.map(Number);
-                                    this.totalChunks = numChunks;
-                                    this.responseBuffer = chunkText.substring(headerMatch[0].length); // Start buffer after header
-                                    this.chunksReceived = this.responseBuffer.length > 0 ? 1 : 0; // If there's data after header, it's the first chunk
-
-                                    if (this.totalChunks === 1 && this.chunksReceived === 1) { // Handle single chunk response with header
-                                        this.processFinalResponse(this.responseBuffer);
-                                    }
-                                } else {
-                                    // If no header, assume it's a single-chunk response without a header
-                                    this.isAwaitingHeader = false; // No longer awaiting header
-                                    this.processFinalResponse(chunkText);
-                                }
-                            } else {
-                                this.responseBuffer += chunkText;
-                                this.chunksReceived++;
-                                if (this.chunksReceived >= this.totalChunks) { // Use >= to be safe
-                                    this.processFinalResponse(this.responseBuffer);
-                                }
-                            }
-                        }
-                    });
-
-                    const cmdString = JSON.stringify(command);
-                    if ((command as Command).cmd === 'restore') {
-                        await this.chunkAndSend(cmdString);
-                    } else {
-                        await this.bluetooth.write({
+                    try {
+                        await this.bluetooth.startNotifying({
                             peripheralUUID: this.peripheral!.UUID,
                             serviceUUID: NUS_SERVICE_UUID,
-                            characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
-                            value: new TextEncoder().encode(cmdString)
+                            characteristicUUID: NUS_RX_CHARACTERISTIC_UUID,
+                            onNotify: ({ value }) => this.handleNotification(value)
                         });
+
+                        const cmdString = JSON.stringify(command);
+                        if ((command as Command).cmd === 'restore') {
+                            await this.chunkAndSend(cmdString);
+                        } else {
+                            await this.bluetooth.write({
+                                peripheralUUID: this.peripheral!.UUID,
+                                serviceUUID: NUS_SERVICE_UUID,
+                                characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
+                                value: new TextEncoder().encode(cmdString)
+                            });
+                        }
+                    } catch (error) {
+                        this.responseRejecter(error);
                     }
                 });
             }
@@ -211,6 +198,33 @@ export class BLEBackend {
             // Start processing the queue
             this.processCommandQueue();
         });
+    }
+
+    public handleNotification(value: ArrayBuffer) {
+        const chunkText = new TextDecoder().decode(value);
+        if (this.isAwaitingHeader) {
+            const headerMatch = chunkText.match(/^(\d+),(\d+),(\d+)\n/);
+            if (headerMatch) {
+                this.isAwaitingHeader = false;
+                const [, totalSize, numChunks, chunkSize] = headerMatch.map(Number);
+                this.totalChunks = numChunks;
+                this.responseBuffer = chunkText.substring(headerMatch[0].length);
+                this.chunksReceived = 1;
+
+                if (this.totalChunks === 1) {
+                    this.processFinalResponse(this.responseBuffer);
+                }
+            } else {
+                this.isAwaitingHeader = false;
+                this.processFinalResponse(chunkText);
+            }
+        } else {
+            this.responseBuffer += chunkText;
+            this.chunksReceived++;
+            if (this.chunksReceived >= this.totalChunks) {
+                this.processFinalResponse(this.responseBuffer);
+            }
+        }
     }
 
     private async chunkAndSend(data: string): Promise<void> {
