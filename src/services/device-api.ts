@@ -49,25 +49,10 @@ class DeviceAPI {
 
     // --- Authentication ---
     async authenticate(): Promise<string> {
-        let passphrase = ApplicationSettings.getString(PASSPHRASE_KEY);
+        const passphrase = ApplicationSettings.getString(PASSPHRASE_KEY);
         if (!passphrase) {
-            const result = await Dialogs.prompt({
-                title: "Enter Passphrase",
-                message: "Please enter the passphrase for your device.",
-                okButtonText: "Save",
-                cancelButtonText: "Cancel",
-                inputType: "password"
-            });
-
-            if (result.result && result.text) {
-                passphrase = result.text;
-                ApplicationSettings.setString(PASSPHRASE_KEY, passphrase);
-            } else {
-                this.disconnect();
-                return Promise.reject("Authentication cancelled.");
-            }
+            return Promise.reject("Passphrase not found.");
         }
-
         return this.passphrase(passphrase);
     }
 

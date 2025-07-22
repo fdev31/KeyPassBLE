@@ -56,9 +56,10 @@
 <script lang="ts" setup>
 import { ref, onMounted, computed, watch, $navigateTo, $showModal } from 'nativescript-vue';
 import { Peripheral } from '@nativescript-community/ble';
-import { ApplicationSettings } from '@nativescript/core';
+import { ApplicationSettings, Dialogs } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
 import { connectionManager, ConnectionState } from '../services/connection-manager';
+import { PASSPHRASE_KEY } from '../services/settings';
 import Settings from './Settings.vue';
 import PassEditPage from './PassEditPage.vue';
 import AdvancedOptions from './AdvancedOptions.vue';
@@ -165,6 +166,25 @@ const handleConnectionStateChange = (newState: ConnectionState) => {
 
 const authenticateAndLoadList = async () => {
     try {
+        let passphrase = ApplicationSettings.getString(PASSPHRASE_KEY);
+        if (!passphrase) {
+            const result = await Dialogs.prompt({
+                title: "Enter Passphrase",
+                message: "Please enter the passphrase for your device.",
+                okButtonText: "Save",
+                cancelButtonText: "Cancel",
+                inputType: "password"
+            });
+
+            if (result.result && result.text) {
+                passphrase = result.text;
+                ApplicationSettings.setString(PASSPHRASE_KEY, passphrase);
+            } else {
+                connectionManager.disconnect();
+                return;
+            }
+        }
+
         const authResponse = await deviceAPI.authenticate();
         statusMessage.value = `Authentication: ${authResponse}`;
         currentMode.value = 'list';
