@@ -56,8 +56,9 @@
 <script lang="ts" setup>
 import { ref, onMounted, computed, watch, $navigateTo, $showModal } from 'nativescript-vue';
 import { Peripheral } from '@nativescript-community/ble';
-import { isAndroid, Device, ApplicationSettings, Frame } from '@nativescript/core';
+import { ApplicationSettings } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
+import { connectionManager, ConnectionState } from '../services/connection-manager';
 import Settings from './Settings.vue';
 import PassEditPage from './PassEditPage.vue';
 import AdvancedOptions from './AdvancedOptions.vue';
@@ -73,12 +74,6 @@ const discoveredDevices = ref<Partial<Peripheral>[]>([]);
 const statusMessage = ref('App started. Loading...');
 const currentMode = ref<'disconnected' | 'connecting' | 'list'>('disconnected');
 const selectedPasswordEntry = ref<PasswordEntry | null>(null);
-
-// Reconnection Logic
-const isReconnecting = ref(false);
-const reconnectAttempts = ref(0);
-const maxReconnectAttempts = 5; // Max attempts before giving up
-const reconnectDelayMs = 5000; // 5 seconds delay between attempts
 
 // Advanced Options
 const endWithReturn = ref(true); // Default to true
@@ -108,25 +103,19 @@ const actionBarTitle = computed(() => {
             return 'KeyPass';
     }
 });
-const reconnectLast = () => {
-    const lastDeviceUUID = ApplicationSettings.getString('lastDeviceUUID');
-    console.log(`[Home.vue] reconnect: lastDeviceUUID = ${lastDeviceUUID}`);
-    if (lastDeviceUUID) {
-        setTimeout(() => connectToDevice({ UUID: lastDeviceUUID, name: 'Last Device' }), 500);
-        return true;
-    }
-    return false;
-}
+
 import { eventBus } from '../services/event-bus';
 
 onMounted(() => {
-    if (reconnectLast()) {
-        statusMessage.value = `Found last device. Connecting...`;
-        currentMode.value = 'connecting';
-    } else {
-        statusMessage.value = 'Last device not found. Please connect or select another.';
-        currentMode.value = 'disconnected';
-    }
+    connectionManager.on('propertyChange', (args) => {
+        if (args.propertyName === 'state') {
+            handleConnectionStateChange(args.value);
+        }
+    });
+
+    // Initial state handling
+    handleConnectionStateChange(connectionManager.state);
+
     // Load cached passwords on startup
     const cachedPasswords = ApplicationSettings.getString('cachedPasswords');
     if (cachedPasswords) {
@@ -155,6 +144,42 @@ onMounted(() => {
     });
 });
 
+const handleConnectionStateChange = (newState: ConnectionState) => {
+    switch (newState) {
+        case ConnectionState.DISCONNECTED:
+            currentMode.value = 'disconnected';
+            statusMessage.value = 'Disconnected. Please select a device.';
+            discoveredDevices.value = [];
+            selectedPasswordEntry.value = null;
+            break;
+        case ConnectionState.CONNECTING:
+            currentMode.value = 'connecting';
+            statusMessage.value = 'Connecting...';
+            break;
+        case ConnectionState.CONNECTED:
+            statusMessage.value = `Connected to ${connectionManager.connectedPeripheral?.name}!`;
+            authenticateAndLoadList();
+            break;
+    }
+};
+
+const authenticateAndLoadList = async () => {
+    try {
+        const authResponse = await deviceAPI.authenticate();
+        statusMessage.value = `Authentication: ${authResponse}`;
+        currentMode.value = 'list';
+        setTimeout(() => {
+            statusMessage.value = 'Loading password list...';
+            loadPasswordList(true);
+        }, 200);
+    } catch (authErr) {
+        console.error(`Authentication failed: ${authErr}`);
+        statusMessage.value = `Authentication failed: ${authErr.message}`;
+        connectionManager.disconnect();
+    }
+};
+
+
 watch(endWithReturn, (newValue) => {
     ApplicationSettings.setBoolean(SETTING_END_WITH_RETURN, newValue);
 });
@@ -166,16 +191,6 @@ watch(useLayoutOverride, (newValue) => {
 watch(selectedLayout, (newValue) => {
     ApplicationSettings.setNumber(SETTING_SELECTED_LAYOUT, newValue);
 });
-
-const disconnectAndGoHome = () => {
-    deviceAPI.disconnect();
-    currentMode.value = 'disconnected';
-    statusMessage.value = 'Disconnected. Please select a device.';
-    discoveredDevices.value = [];
-    selectedPasswordEntry.value = null; // Clear selected password on disconnect
-    isReconnecting.value = false; // Reset reconnection state
-    reconnectAttempts.value = 0; // Reset reconnection attempts
-};
 
 const loadPasswordList = async (forced) => {
     if (!forced && passwordStore.entries.length > 0) {
@@ -223,89 +238,14 @@ const typeSelectedPassword = async () => {
     }
 };
 
-const attemptReconnect = (device: Partial<Peripheral>) => {
-    if (reconnectAttempts.value < maxReconnectAttempts) {
-        reconnectAttempts.value++;
-        isReconnecting.value = true;
-        statusMessage.value = `Connection lost. Attempting to reconnect (${reconnectAttempts.value}/${maxReconnectAttempts})...`;
-        setTimeout(() => connectToDevice(device, true), reconnectDelayMs);
-    } else {
-        statusMessage.value = `Failed to reconnect after ${maxReconnectAttempts} attempts. Disconnecting.`;
-        disconnectAndGoHome();
-    }
-};
-
-const connectToDevice = async (device: Partial<Peripheral>, isReconnect: boolean = false) => {
-    try {
-        await deviceAPI.requestPermissions();
-        const isEnabled = await deviceAPI.isBluetoothEnabled();
-        if (!isEnabled) {
-            alert('Bluetooth is not enabled.');
-            currentMode.value = 'disconnected';
-            return;
-        }
-
-        statusMessage.value = `Connecting to ${device.name || device.UUID}...`;
-        currentMode.value = 'connecting';
-
-        await deviceAPI.connect(
-            { UUID: device.UUID },
-            async (peripheral: Peripheral) => {
-                console.log(`Connected to ${peripheral.UUID}`);
-                statusMessage.value = `Connected to ${peripheral.name}!`;
-                isReconnecting.value = false; // Reset reconnection state on successful connection
-                reconnectAttempts.value = 0; // Reset attempts
-                try {
-                    const authResponse = await deviceAPI.authenticate();
-                    statusMessage.value = `Authentication: ${authResponse}`;
-                    currentMode.value = 'list';
-                    setTimeout(() => {
-                        statusMessage.value = 'Loading password list...';
-                        loadPasswordList(true);
-                    }, 200);
-                } catch (authErr) {
-                    console.error(`Authentication failed: ${authErr}`);
-                    statusMessage.value = `Authentication failed: ${authErr.message}`;
-                    disconnectAndGoHome();
-                }
-            },
-            (peripheral: Peripheral) => {
-                console.log(`Disconnected from ${peripheral.UUID}`);
-                statusMessage.value = `Disconnected from ${peripheral.name}.`;
-                // Only attempt reconnect if it was not a user-initiated disconnect
-                if (currentMode.value === 'list') { // Assuming 'list' mode means we were actively connected
-                    attemptReconnect(peripheral);
-                } else {
-                    disconnectAndGoHome();
-                }
-            }
-        );
-    } catch (err) {
-        console.error(`Error connecting to device:`, err);
-        console.error(`Type of error: ${typeof err}`);
-        statusMessage.value = `Failed to connect: ${err ? err.message : 'Unknown error'}`;
-        if (!isReconnect) { // Only remove last device if it's not a reconnection attempt
-            ApplicationSettings.remove('lastDeviceUUID');
-            // If it's an initial connection attempt and it fails, go back to disconnected mode
-            currentMode.value = 'disconnected';
-            isReconnecting.value = false; // Ensure reconnection state is reset on hard failure
-            reconnectAttempts.value = 0; // Reset attempts
-        } else if (currentMode.value === 'list') { // If it's a reconnection attempt and fails, try again
-            attemptReconnect(device);
-        } else {
-            // If it's a reconnection attempt but not in list mode (e.g., failed initial connect and then tried reconnecting)
-            currentMode.value = 'disconnected';
-            isReconnecting.value = false; // Ensure reconnection state is reset on hard failure
-            reconnectAttempts.value = 0; // Reset attempts
-        }
-    }
+const connectToDevice = async (device: Partial<Peripheral>) => {
+    await connectionManager.connect(device as Peripheral);
 };
 
 const listPairedDevices = async () => {
     try {
         const devices = await deviceAPI.listPairedDevices();
         if (devices.length > 0) {
-            reconnectLast(); // Try to reconnect to last device after listing
             discoveredDevices.value.length = 0;
             devices.forEach(d => discoveredDevices.value.push(d));
             statusMessage.value = `Found ${devices.length} paired devices. Tap one to connect.`;
@@ -324,21 +264,13 @@ const startScan = async () => {
     discoveredDevices.value = [];
     statusMessage.value = 'Scanning for devices...';
     try {
-        await deviceAPI.requestPermissions();
-        const isEnabled = await deviceAPI.isBluetoothEnabled();
-        if (!isEnabled) {
-            alert('Bluetooth is not enabled.');
-            isScanning.value = false;
-            return;
-        }
-        await deviceAPI.startScan((peripheral) => {
+        await connectionManager.startScan((peripheral) => {
             const existing = discoveredDevices.value.find(d => d.UUID === peripheral.UUID);
             if (!existing) {
                 discoveredDevices.value.push(peripheral);
             }
         });
         statusMessage.value = `Scan complete. Found ${discoveredDevices.value.length} devices.`;
-        reconnectLast(); // Try to reconnect to last device after scan
     } catch (err) {
         console.error(`Error during scan: ${err}`);
         statusMessage.value = `Scan failed: ${err.message}`;
@@ -410,7 +342,7 @@ const openAdvancedOptions = async () => {
 const onNavigatedTo = () => {
     // When navigating back to this page, refresh the password list if we are in list mode.
     if (currentMode.value === 'list') {
-        loadPasswordList();
+        loadPasswordList(false);
     }
 };
 </script>
