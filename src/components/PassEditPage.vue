@@ -63,9 +63,6 @@ const onNavigatingTo = (event: NavigatedData) => {
 const togglePasswordVisibility = () => {
     showPassword.value = !showPassword.value;
     if (password.value.length == 0) {
-        deviceAPI.authenticate()
-            .then( ()=> {
-
         deviceAPI.fetchPass(uid.value)
             .then((fetchedPassword) => {
                 if (fetchedPassword === null) {
@@ -77,9 +74,8 @@ const togglePasswordVisibility = () => {
             .catch((error) => {
                 console.error("Failed to fetch password:", error);
                 alert(`Failed to fetch password: ${error.message || error}`);
-            });
-}
-        )
+            })
+        ;
     }
 };
 
