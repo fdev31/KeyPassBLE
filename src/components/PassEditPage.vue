@@ -26,11 +26,9 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'nativescript-vue';
-import { $navigateBack } from 'nativescript-vue';
+import { ref, computed, $navigateBack } from 'nativescript-vue';
 import { deviceAPI } from '../services/device-api';
 import { NavigatedData } from '@nativescript/core';
-
 import { passwordStore } from '../services/store';
 
 const name = ref('');
@@ -100,7 +98,7 @@ const generatePassword = () => {
 };
 
 const savePassword = async () => {
-    const addToList = () => {
+    const updateEntry = () => {
         passwordStore.addOrUpdate({
           uid: uid.value,
           name: name.value,
@@ -116,7 +114,7 @@ const savePassword = async () => {
         try {
             await deviceAPI.editPass(parseInt(uid.value), name.value, password.value || undefined, selectedLayout.value);
             alert('Password updated successfully!');
-            addToList();
+            updateEntry();
             $navigateBack();
         } catch (error) {
             console.error("Failed to update password:", error);
@@ -129,11 +127,9 @@ const savePassword = async () => {
             return;
         }
         try {
-            // Using editPass with a null ID to add a new password.
-            // This assumes the device firmware handles a null/zero ID as a "new" command.
-            await deviceAPI.editPass(null, name.value, password.value, selectedLayout.value);
+            await deviceAPI.editPass(passwordStore.entries.length, name.value, password.value, selectedLayout.value);
             alert('Password saved successfully!');
-            addToList();
+            updateEntry();
             $navigateBack();
         } catch (error) {
             console.error("Failed to save password:", error);
