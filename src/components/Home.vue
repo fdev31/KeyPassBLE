@@ -186,7 +186,7 @@ const authenticateAndLoadList = async () => {
         }
 
         const authResponse = await deviceAPI.authenticate();
-        statusMessage.value = `Authentication: ${authResponse}`;
+        statusMessage.value = authResponse.m;
         currentMode.value = 'list';
         setTimeout(() => {
             statusMessage.value = 'Loading password list...';
@@ -251,7 +251,7 @@ const typeSelectedPassword = async () => {
             layoutToUse,
             endWithReturn.value
         );
-        statusMessage.value = `Password typed: ${response}`;
+        statusMessage.value = response.m;
     } catch (err) {
         console.error(`Failed to type password: ${err}`);
         statusMessage.value = `Failed to type password: ${err.message}`;

@@ -103,6 +103,10 @@ class DeviceAPI {
     restore(data: string): Promise<string> {
         return this.backend.sendCommand({ cmd: "restore", data });
     }
+
+    restoreOne(uid: Number, data: string): Promise<string> {
+        return this.backend.sendCommand({ cmd: "restoreOne", uid, data });
+    }
 }
 
 export const deviceAPI = new DeviceAPI();

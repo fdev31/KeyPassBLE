@@ -20,6 +20,7 @@
             <Label text="Backup and Restore" class="setting-label"></Label>
             <StackLayout>
                 <Button text="Backup" @tap="backup" class="btn btn-secondary backup-button"></Button>
+                <Button text="Restore" @tap="restore" class="btn btn-secondary"></Button>
                 <TextView
                     v-model="restoreData"
                     hint="Paste backup data here for restore..."
@@ -28,7 +29,6 @@
                     @focus="isRestoreDataFocused = true"
                     @blur="isRestoreDataFocused = false"
                 ></TextView>
-                <Button text="Restore" @tap="restore" class="btn btn-secondary"></Button>
             </StackLayout>
         </StackLayout>
         </ScrollView>
@@ -111,7 +111,18 @@ const restore = async () => {
             alert('Clipboard is empty and no data in text area. Copy backup data to clipboard or paste in text area first.');
             return;
         }
-        await deviceAPI.restore(dumpData);
+        // TODO: implement a progress bar
+        alert('Starting restoration, will take a while...!');
+        // send dump data line by line, ignoring blanks and lines starting with #
+        let index = 0
+        for (const line of dumpData.split('\n')) {
+            const trimmedLine = line.trim();
+            if (trimmedLine && !trimmedLine.startsWith('#')) {
+                console.log(`restore entry ${index}: ${trimmedLine}`);
+                await deviceAPI.restoreOne(index, trimmedLine);
+                index ++;
+            }
+        }
         alert('Restore successful!');
         eventBus.notify({ eventName: 'list-needs-refresh' });
     } catch (error) {

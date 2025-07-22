@@ -164,32 +164,18 @@ export class BLEBackend {
 
                     try {
                         const cmdString = JSON.stringify(command);
-                        if ((command as Command).cmd === 'restore') {
-                            this._isRestoring = true;
-                            await this.chunkAndSend(cmdString);
-                            this._isRestoring = false;
-
-                            // Reset state and start timeout for the final response after restore chunks are sent
-                            this.resetResponseHandling(); // This also clears responseTimeoutId
-                            this.responseTimeoutId = setTimeout(() => {
-                                console.log(`[BLEBackend] Restore response timeout reached. Processing final response.`);
-                                this.processFinalResponse(this.responseBuffer);
-                            }, 10000); // Use a longer timeout for restore if needed
-
-                        } else {
-                            await this.bluetooth.startNotifying({
-                                peripheralUUID: this.peripheral!.UUID,
-                                serviceUUID: NUS_SERVICE_UUID,
-                                characteristicUUID: NUS_RX_CHARACTERISTIC_UUID,
-                                onNotify: ({ value }) => this.handleNotification(value)
-                            });
-                            await this.bluetooth.write({
-                                peripheralUUID: this.peripheral!.UUID,
-                                serviceUUID: NUS_SERVICE_UUID,
-                                characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
-                                value: new TextEncoder().encode(cmdString)
-                            });
-                        }
+                        await this.bluetooth.startNotifying({
+                            peripheralUUID: this.peripheral!.UUID,
+                            serviceUUID: NUS_SERVICE_UUID,
+                            characteristicUUID: NUS_RX_CHARACTERISTIC_UUID,
+                            onNotify: ({ value }) => this.handleNotification(value)
+                        });
+                        await this.bluetooth.write({
+                            peripheralUUID: this.peripheral!.UUID,
+                            serviceUUID: NUS_SERVICE_UUID,
+                            characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
+                            value: new TextEncoder().encode(cmdString)
+                        });
                     } catch (error) {
                         this.responseRejecter(error);
                     }
@@ -251,23 +237,6 @@ export class BLEBackend {
         }, 200);
     }
 
-    private async chunkAndSend(data: string): Promise<void> {
-        const mtu = this.peripheral?.mtu || 20; // Default to 20 if MTU is not available
-        const chunkSize = mtu - 3; // 3 bytes for BLE headers
-
-        for (let i = 0; i < data.length; i += chunkSize) {
-            const chunk = data.substring(i, i + chunkSize);
-            const dataChunk = new TextEncoder().encode(chunk);
-
-            await this.bluetooth.write({
-                peripheralUUID: this.peripheral!.UUID,
-                serviceUUID: NUS_SERVICE_UUID,
-                characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
-                value: dataChunk
-            });
-        }
-    }
-
     private sleep(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
@@ -279,7 +248,6 @@ export class BLEBackend {
         }
         console.log(`[BLEBackend] Final response before trim: "${response}"`);
         const trimmedResponse = response.trim();
-        console.log(`[BLEBackend] Final response after trim: "${trimmedResponse}"`);
         if (this.responseResolver) {
             const trimmedResponse = response.trim();
             if (this._currentResponseType === 'json') {
