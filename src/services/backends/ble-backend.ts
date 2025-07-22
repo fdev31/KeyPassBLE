@@ -39,7 +39,7 @@ export class BLEBackend {
         this.isProcessingCommand = true;
         try {
             const nextCommand = this.pendingCommandsQueue.shift()!;
-            await this.sleep(200); // Small delay to prevent overwhelming the device
+            await this.sleep(50); // Small delay to prevent overwhelming the device
             await nextCommand();
         } finally {
             this.isProcessingCommand = false;
