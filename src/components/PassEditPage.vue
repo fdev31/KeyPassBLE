@@ -98,12 +98,15 @@ const generatePassword = () => {
 };
 
 const savePassword = async () => {
-    const updateEntry = () => {
+    const saveAndReturn = async (uid, name, password, layout) => {
+        await deviceAPI.savePass(uid, name, password, layout);
         passwordStore.addOrUpdate({
           uid: uid.value,
           name: name.value,
           layout: selectedLayout.value,
         });
+        alert('Password updated successfully!');
+        $navigateBack();
     }
     if (isEditMode.value) {
         // Edit existing password
@@ -112,10 +115,7 @@ const savePassword = async () => {
             return;
         }
         try {
-            await deviceAPI.editPass(parseInt(uid.value), name.value, password.value || undefined, selectedLayout.value);
-            alert('Password updated successfully!');
-            updateEntry();
-            $navigateBack();
+            await saveAndReturn(parseInt(uid.value), name.value, password.value, selectedLayout.value);
         } catch (error) {
             console.error("Failed to update password:", error);
             alert(`Failed to update password: ${error.message || error}`);
@@ -127,10 +127,7 @@ const savePassword = async () => {
             return;
         }
         try {
-            await deviceAPI.editPass(passwordStore.entries.length, name.value, password.value, selectedLayout.value);
-            alert('Password saved successfully!');
-            updateEntry();
-            $navigateBack();
+            await saveAndReturn(passwordStore.entries.length, name.value, password.value, selectedLayout.value);
         } catch (error) {
             console.error("Failed to save password:", error);
             alert(`Failed to save password: ${error.message || error}`);
