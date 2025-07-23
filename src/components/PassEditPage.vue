@@ -42,6 +42,7 @@ const showPassword = ref(false);
 const selectedLayout = ref(0); // Default to FR
 const uid = ref<string | null>(null);
 const isEditMode = ref(false);
+const originalPasswordEntry = ref(null);
 
 const passwordChanged = computed(() => password.value !== '');
 
@@ -60,6 +61,7 @@ const onNavigatingTo = (event: NavigatedData) => {
     const context = event.context as any;
     if (context && context.propsData && context.propsData.passwordEntry) {
         const passwordEntry = context.propsData.passwordEntry;
+        originalPasswordEntry.value = passwordEntry;
         isEditMode.value = !!passwordEntry.name; // Only edit mode if name exists
 
         name.value = passwordEntry.name;
@@ -88,7 +90,11 @@ const togglePasswordVisibility = () => {
 };
 
 const generatePassword = () => {
-    const length = password.value.length;
+    let length = password.value.length;
+    if (isEditMode.value && length === 0 && originalPasswordEntry.value?.len) {
+        length = originalPasswordEntry.value.len;
+    }
+
     if (length === 0) {
         alert("Please enter a password to set the length for generation.");
         return;
