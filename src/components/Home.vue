@@ -106,7 +106,7 @@ const actionBarTitle = computed(() => {
     }
 });
 
-const runStartupLogic = () => {
+const runStartupLogic = async () => {
     if (startupLogicHasRun.value) {
         return;
     }
@@ -136,8 +136,15 @@ const runStartupLogic = () => {
     // Auto-connect to the last device
     const lastDeviceUUID = ApplicationSettings.getString(LAST_DEVICE_KEY);
     if (lastDeviceUUID) {
-        connectToDevice({ UUID: lastDeviceUUID });
+        try {
+            await connectToDevice({ UUID: lastDeviceUUID });
+        } catch (e) {
+            console.log("Initial connection failed, will rely on reconnect timer.");
+            // Set as complete so the splash screen hides
+            appStore.isInitialLoadComplete.value = true;
+        }
     } else {
+        // No last device, so we are done with the initial load.
         appStore.isInitialLoadComplete.value = true;
     }
 };

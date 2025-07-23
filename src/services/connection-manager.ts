@@ -79,6 +79,7 @@ class ConnectionManager extends Observable {
             console.error(`[ConnectionManager] Connection error: ${error}`);
             this.setState(ConnectionState.DISCONNECTED);
             this.startReconnectTimer(); // Restart the timer on a failed connection
+            throw error; // Re-throw the error to notify the caller
         } finally {
             this.isConnecting = false;
         }
