@@ -3,35 +3,40 @@
         <ActionBar title="Settings" class="action-bar">
             <NavigationButton text="Back" />
         </ActionBar>
-        <ScrollView>
-        <StackLayout class="page-container">
+        <GridLayout rows="*" columns="*">
+            <ScrollView>
+                <StackLayout class="page-container">
 
-            <Label text="Device Name" class="setting-label"></Label>
-            <TextField v-model="deviceName" hint="Enter device name" class="setting-input"></TextField>
+                    <Label text="Device Name" class="setting-label"></Label>
+                    <TextField v-model="deviceName" hint="Enter device name" class="setting-input"></TextField>
 
-            <Label text="Passphrase" class="setting-label"></Label>
-            <GridLayout columns="*, auto" verticalAlignment="center">
-                <TextField col="0" v-model="passphrase" :secure="!showPassphrase" hint="Enter passphrase" class="setting-input" style="margin-bottom: 0;"></TextField>
-                <Button col="1" :text="showPassphrase ? 'Hide' : 'Show'" @tap="togglePassphraseVisibility" class="btn btn-secondary toggle-button"></Button>
+                    <Label text="Passphrase" class="setting-label"></Label>
+                    <GridLayout columns="*, auto" verticalAlignment="center">
+                        <TextField col="0" v-model="passphrase" :secure="!showPassphrase" hint="Enter passphrase" class="setting-input" style="margin-bottom: 0;"></TextField>
+                        <Button col="1" :text="showPassphrase ? 'Hide' : 'Show'" @tap="togglePassphraseVisibility" class="btn btn-secondary toggle-button"></Button>
+                    </GridLayout>
+
+                    <Button text="Save Settings" @tap="saveSettings" class="btn btn-primary save-button"></Button>
+
+                    <Label text="Backup and Restore" class="setting-label"></Label>
+                    <StackLayout>
+                        <Button text="Backup" @tap="backup" class="btn btn-secondary backup-button"></Button>
+                        <Button text="Restore" @tap="restore" class="btn btn-secondary"></Button>
+                        <TextView
+                            v-model="restoreData"
+                            hint="Paste backup data here for restore..."
+                            class="setting-input"
+                            :height="isRestoreDataFocused || restoreData.length > 0 ? 120 : 50"
+                            @focus="isRestoreDataFocused = true"
+                            @blur="isRestoreDataFocused = false"
+                        ></TextView>
+                    </StackLayout>
+                </StackLayout>
+            </ScrollView>
+            <GridLayout v-if="isRestoring" class="overlay" rows="auto" verticalAlignment="middle">
+                <Progress :value="restoreProgress" class="progress-bar"></Progress>
             </GridLayout>
-
-            <Button text="Save Settings" @tap="saveSettings" class="btn btn-primary save-button"></Button>
-
-            <Label text="Backup and Restore" class="setting-label"></Label>
-            <StackLayout>
-                <Button text="Backup" @tap="backup" class="btn btn-secondary backup-button"></Button>
-                <Button text="Restore" @tap="restore" class="btn btn-secondary"></Button>
-                <TextView
-                    v-model="restoreData"
-                    hint="Paste backup data here for restore..."
-                    class="setting-input"
-                    :height="isRestoreDataFocused || restoreData.length > 0 ? 120 : 50"
-                    @focus="isRestoreDataFocused = true"
-                    @blur="isRestoreDataFocused = false"
-                ></TextView>
-            </StackLayout>
-        </StackLayout>
-        </ScrollView>
+        </GridLayout>
     </Page>
 </template>
 
@@ -48,6 +53,8 @@ const passphrase = ref('');
 const showPassphrase = ref(false);
 const restoreData = ref('');
 const isRestoreDataFocused = ref(false);
+const isRestoring = ref(false);
+const restoreProgress = ref(0);
 
 const originalPassphrase = ref(''); // To track if passphrase changed
 
@@ -100,6 +107,8 @@ const backup = async () => {
 import { eventBus } from '../services/event-bus';
 
 const restore = async () => {
+    isRestoring.value = true;
+    restoreProgress.value = 0;
     try {
         let dumpData = restoreData.value.trim();
 
@@ -111,23 +120,30 @@ const restore = async () => {
             alert('Clipboard is empty and no data in text area. Copy backup data to clipboard or paste in text area first.');
             return;
         }
-        // TODO: implement a progress bar
-        alert('Starting restoration, will take a while...!');
-        // send dump data line by line, ignoring blanks and lines starting with #
-        let index = 0
-        for (const line of dumpData.split('\n')) {
+        
+        const lines = dumpData.split('\n').filter(line => {
             const trimmedLine = line.trim();
-            if (trimmedLine && !trimmedLine.startsWith('#')) {
-                console.log(`restore entry ${index}: ${trimmedLine}`);
-                await deviceAPI.restoreOne(index, trimmedLine);
-                index ++;
-            }
+            return trimmedLine && !trimmedLine.startsWith('#');
+        });
+
+        const totalLines = lines.length;
+        alert(`Starting restoration of ${totalLines} entries, this will take a while...`);
+
+        let index = 0;
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            console.log(`restore entry ${index}: ${trimmedLine}`);
+            await deviceAPI.restoreOne(index, trimmedLine);
+            index++;
+            restoreProgress.value = (index / totalLines) * 100;
         }
         alert('Restore successful!');
         eventBus.notify({ eventName: 'list-needs-refresh' });
     } catch (error) {
         console.error("Restore failed:", error);
         alert(`Restore failed: ${error.message || error}`);
+    } finally {
+        isRestoring.value = false;
     }
 };
 </script>
@@ -188,5 +204,14 @@ const restore = async () => {
 
 .save-button {
     margin-top: 24;
+}
+
+.overlay {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.progress-bar {
+    margin: 16;
+    color: #4F46E5;
 }
 </style>
