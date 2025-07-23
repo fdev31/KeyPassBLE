@@ -33,8 +33,12 @@
                     </StackLayout>
                 </StackLayout>
             </ScrollView>
-            <GridLayout v-if="isBusy" class="overlay" rows="auto" verticalAlignment="middle">
-                <Progress :value="progress" maxValue="100" class="progress-bar"></Progress>
+            <GridLayout v-if="isBusy" class="overlay" rows="*" verticalAlignment="middle">
+                <StackLayout class="progress-container">
+                    <Label :text="progressTitle" class="progress-title"></Label>
+                    <Progress :value="progress" maxValue="100" class="progress-bar"></Progress>
+                    <Label :text="`${Math.round(progress)}%`" class="progress-label"></Label>
+                </StackLayout>
             </GridLayout>
         </GridLayout>
     </Page>
@@ -46,6 +50,7 @@ import { ApplicationSettings } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
 import { PASSPHRASE_KEY, SETTING_DEVICE_NAME } from '../services/settings';
 import * as Clipboard from 'nativescript-clipboard';
+import { passwordStore } from '../services/store';
 
 
 const deviceName = ref('');
@@ -55,6 +60,7 @@ const restoreData = ref('');
 const isRestoreDataFocused = ref(false);
 const isBusy = ref(false);
 const progress = ref(0);
+const progressTitle = ref('');
 
 const originalPassphrase = ref(''); // To track if passphrase changed
 
@@ -96,10 +102,12 @@ const saveSettings = async () => {
 const backup = async () => {
     isBusy.value = true;
     progress.value = 0;
+    progressTitle.value = 'Backing up...';
     try {
         let fullDump = [];
         let index = 0;
         let expectedLength = -1;
+        const totalPasswords = passwordStore.entries.length;
 
         while (true) {
             const entry = await deviceAPI.dumpOne(index);
@@ -113,7 +121,9 @@ const backup = async () => {
             }
             
             fullDump.push(entry);
-            progress.value = (index * 10) % 100;
+            if (totalPasswords > 0) {
+                progress.value = Math.min(100, ((index + 1) / totalPasswords) * 100);
+            }
             index++;
         }
         const dumpData = fullDump.join('\n');
@@ -132,6 +142,7 @@ import { eventBus } from '../services/event-bus';
 const restore = async () => {
     isBusy.value = true;
     progress.value = 0;
+    progressTitle.value = 'Restoring...';
     try {
         let dumpData = restoreData.value.trim();
 
@@ -230,11 +241,33 @@ const restore = async () => {
 }
 
 .overlay {
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.progress-container {
+    background-color: #F3F4F6;
+    border-radius: 8;
+    padding: 24;
+    margin: 16;
+}
+
+.progress-title {
+    font-size: 18;
+    font-weight: bold;
+    color: #111827;
+    text-align: center;
+    margin-bottom: 16;
 }
 
 .progress-bar {
-    margin: 16;
     color: #4F46E5;
+    height: 10; /* Make it thicker */
+}
+
+.progress-label {
+    font-size: 14;
+    color: #4B5563;
+    text-align: center;
+    margin-top: 8;
 }
 </style>
