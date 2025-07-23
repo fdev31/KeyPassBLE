@@ -4,7 +4,7 @@
             <NavigationButton text="Back" />
         </ActionBar>
         <GridLayout rows="*" columns="*">
-            <ScrollView>
+            <ScrollView row="0" col="0">
                 <StackLayout class="page-container">
 
                     <Label text="Device Name" class="setting-label"></Label>
@@ -33,8 +33,8 @@
                     </StackLayout>
                 </StackLayout>
             </ScrollView>
-            <GridLayout v-if="isBusy" class="overlay" rows="*" verticalAlignment="middle">
-                <StackLayout class="progress-container">
+            <GridLayout row="0" col="0" v-if="isBusy" class="overlay" rows="*, auto, *" columns="*" height="100%">
+                <StackLayout row="1" class="progress-container" horizontalAlignment="center">
                     <Label :text="progressTitle" class="progress-title"></Label>
                     <Progress :value="progress" maxValue="100" class="progress-bar"></Progress>
                     <Label :text="`${Math.round(progress)}%`" class="progress-label"></Label>
