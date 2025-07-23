@@ -13,6 +13,7 @@ class ConnectionManager extends Observable {
     private _state: ConnectionState = ConnectionState.DISCONNECTED;
     private _connectedPeripheral: Peripheral | null = null;
     private _lastConnectedDeviceUUID: string | null = ApplicationSettings.getString(LAST_DEVICE_KEY) || null;
+    private isConnecting = false; // Flag to prevent concurrent connection attempts
 
     constructor() {
         super();
@@ -22,7 +23,7 @@ class ConnectionManager extends Observable {
     private async init() {
         await deviceAPI.requestPermissions();
         if (await deviceAPI.isBluetoothEnabled() && this._lastConnectedDeviceUUID) {
-            this.reconnect();
+            this.connect({ UUID: this._lastConnectedDeviceUUID } as Peripheral);
         }
     }
 
@@ -54,10 +55,16 @@ class ConnectionManager extends Observable {
     }
 
     async connect(peripheral: Peripheral): Promise<void> {
-        if (this.state !== ConnectionState.DISCONNECTED) {
+        // Guard against connecting if already connected or a connection is in progress.
+        if (
+            (this.state === ConnectionState.CONNECTED && this._connectedPeripheral?.UUID === peripheral.UUID) ||
+            this.isConnecting
+        ) {
+            console.log('[ConnectionManager] Connect called while already connected or connecting. Ignoring.');
             return;
         }
 
+        this.isConnecting = true;
         this.setState(ConnectionState.CONNECTING);
 
         try {
@@ -69,6 +76,8 @@ class ConnectionManager extends Observable {
         } catch (error) {
             console.error(`[ConnectionManager] Connection error: ${error}`);
             this.setState(ConnectionState.DISCONNECTED);
+        } finally {
+            this.isConnecting = false;
         }
     }
 
@@ -88,48 +97,7 @@ class ConnectionManager extends Observable {
     private onDisconnected(peripheral: Peripheral) {
         this.setConnectedPeripheral(null);
         this.setState(ConnectionState.DISCONNECTED);
-        console.log(`[ConnectionManager] Disconnected from ${peripheral.UUID}. Attempting to reconnect...`);
-        this.reconnect();
-    }
-
-    private async reconnect() {
-        if (!this._lastConnectedDeviceUUID) {
-            return;
-        }
-
-        this.setState(ConnectionState.CONNECTING);
-        console.log(`[ConnectionManager] Attempting to reconnect to ${this._lastConnectedDeviceUUID}`);
-
-        let foundAndConnected = false;
-        try {
-            await deviceAPI.startScan(async (peripheral) => {
-                if (peripheral.UUID === this._lastConnectedDeviceUUID) {
-                    console.log(`[ConnectionManager] Found last connected device: ${peripheral.name || peripheral.UUID}`);
-                    try {
-                        await deviceAPI.connect(
-                            peripheral,
-                            (p) => this.onConnected(p),
-                            (p) => this.onDisconnected(p)
-                        );
-                        foundAndConnected = true;
-                    } catch (error) {
-                        console.error(`[ConnectionManager] Reconnection error: ${error}`);
-                        this.setState(ConnectionState.DISCONNECTED);
-                    }
-                }
-            });
-        } catch (error) {
-            console.error(`[ConnectionManager] Scan for reconnect error: ${error}`);
-            this.setState(ConnectionState.DISCONNECTED);
-        } finally {
-            // The scan automatically stops after the duration set in ble-backend.ts (4 seconds)
-            // If we haven't connected by now, set state to disconnected.
-            if (!foundAndConnected) {
-                console.log(`[ConnectionManager] Could not reconnect to ${this._lastConnectedDeviceUUID} within scan period.`);
-                this.setState(ConnectionState.DISCONNECTED);
-                setTimeout(this.reconnect, 5000); // Retry after 5 seconds
-            }
-        }
+        console.log(`[ConnectionManager] Disconnected from ${peripheral.UUID}.`);
     }
 }
 

@@ -106,29 +106,11 @@ const actionBarTitle = computed(() => {
     }
 });
 
-onMounted(() => {
-    console.log('Home.vue: onMounted');
-    connectionManager.on('propertyChange', (args) => {
-        if (args.propertyName === 'state') {
-            handleConnectionStateChange(args.value);
-        }
-    });
-    appStore.isInitialLoadComplete.value = true;
-});
-
-const onNavigatedTo = () => {
+const runStartupLogic = () => {
     if (startupLogicHasRun.value) {
-        // When navigating back to this page, refresh the password list if we are in list mode.
-        if (currentMode.value === 'list') {
-            loadPasswordList(false);
-        }
         return;
     }
-
     startupLogicHasRun.value = true;
-
-    // Initial state handling
-    handleConnectionStateChange(connectionManager.state);
 
     // Load cached passwords on startup
     const cachedPasswords = ApplicationSettings.getString('cachedPasswords');
@@ -155,6 +137,25 @@ const onNavigatedTo = () => {
     const lastDeviceUUID = ApplicationSettings.getString(LAST_DEVICE_KEY);
     if (lastDeviceUUID) {
         connectToDevice({ UUID: lastDeviceUUID });
+    } else {
+        appStore.isInitialLoadComplete.value = true;
+    }
+};
+
+onMounted(() => {
+    console.log('Home.vue: onMounted');
+    connectionManager.on('propertyChange', (args) => {
+        if (args.propertyName === 'state') {
+            handleConnectionStateChange(args.value);
+        }
+    });
+    runStartupLogic();
+});
+
+const onNavigatedTo = () => {
+    // When navigating back to this page, refresh the password list if we are in list mode.
+    if (currentMode.value === 'list') {
+        loadPasswordList(false);
     }
 };
 
@@ -209,6 +210,8 @@ const authenticateAndLoadList = async () => {
         console.error(`Authentication failed: ${authErr}`);
         statusMessage.value = `Authentication failed: ${authErr.message}`;
         connectionManager.disconnect();
+    } finally {
+        appStore.isInitialLoadComplete.value = true;
     }
 };
 
