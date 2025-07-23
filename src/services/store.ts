@@ -42,3 +42,7 @@ export const passwordStore = {
     ApplicationSettings.setString('cachedPasswords', JSON.stringify(passwordEntries.value));
   }
 };
+
+export const appStore = {
+    isInitialLoadComplete: ref(false),
+};

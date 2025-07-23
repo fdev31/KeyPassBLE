@@ -55,16 +55,15 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, computed, watch, $navigateTo, $showModal } from 'nativescript-vue';
-import { eventBus } from '../services/event-bus';
+import { connectionManager, ConnectionState } from '../services/connection-manager';
 import { Peripheral } from '@nativescript-community/ble';
 import { ApplicationSettings, Dialogs } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
-import { connectionManager, ConnectionState } from '../services/connection-manager';
 import { PASSPHRASE_KEY, LAST_DEVICE_KEY } from '../services/settings';
 import Settings from './Settings.vue';
 import PassEditPage from './PassEditPage.vue';
 import AdvancedOptions from './AdvancedOptions.vue';
-import { passwordStore } from '../services/store';
+import { passwordStore, appStore } from '../services/store';
 
 interface PasswordEntry {
     uid: string;
@@ -108,17 +107,13 @@ const actionBarTitle = computed(() => {
 });
 
 onMounted(() => {
+    console.log('Home.vue: onMounted');
     connectionManager.on('propertyChange', (args) => {
         if (args.propertyName === 'state') {
             handleConnectionStateChange(args.value);
         }
     });
-
-    eventBus.on('list-needs-refresh', () => {
-        setTimeout(() => {
-            loadPasswordList(true);
-        }, 100);
-    });
+    appStore.isInitialLoadComplete.value = true;
 });
 
 const onNavigatedTo = () => {
@@ -161,7 +156,6 @@ const onNavigatedTo = () => {
     if (lastDeviceUUID) {
         connectToDevice({ UUID: lastDeviceUUID });
     }
-    eventBus.emit('initial-load-complete');
 };
 
 const handleConnectionStateChange = (newState: ConnectionState) => {

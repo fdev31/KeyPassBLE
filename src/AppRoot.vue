@@ -1,36 +1,31 @@
 <template>
-    <SplashScreen v-if="showSplash" />
-    <Frame v-else>
-        <Home />
-    </Frame>
+    <GridLayout>
+        <Frame>
+            <Home />
+        </Frame>
+        <SplashScreen v-if="showSplash" />
+    </GridLayout>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'nativescript-vue';
+import { ref, onMounted, computed, watchEffect } from 'nativescript-vue';
 import Home from './components/Home.vue';
 import SplashScreen from './components/SplashScreen.vue';
-import { eventBus } from './services/event-bus';
+import { appStore } from './services/store';
 
-const showSplash = ref(true);
+const timerElapsed = ref(false);
 
 onMounted(() => {
-    let timerElapsed = false;
-    let loadComplete = false;
-
-    function hideSplashScreenIfReady() {
-        if (timerElapsed && loadComplete) {
-            showSplash.value = false;
-        }
-    }
-
+    console.log('AppRoot.vue: onMounted');
     setTimeout(() => {
-        timerElapsed = true;
-        hideSplashScreenIfReady();
+        console.log('AppRoot.vue: 2-second timer elapsed.');
+        timerElapsed.value = true;
     }, 2000);
+});
 
-    eventBus.on('initial-load-complete', () => {
-        loadComplete = true;
-        hideSplashScreenIfReady();
-    });
+const showSplash = computed(() => {
+    const shouldShow = !timerElapsed.value || !appStore.isInitialLoadComplete.value;
+    console.log(`AppRoot.vue: showSplash computed: timerElapsed=${timerElapsed.value}, isInitialLoadComplete=${appStore.isInitialLoadComplete.value}, showSplash=${shouldShow}`);
+    return shouldShow;
 });
 </script>
