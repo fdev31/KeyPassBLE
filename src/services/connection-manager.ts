@@ -77,7 +77,7 @@ class ConnectionManager extends Observable {
             deviceAPI.disconnect();
         }
     }
-    
+
     private onConnected(peripheral: Peripheral) {
         this.setConnectedPeripheral(peripheral);
         this.setState(ConnectionState.CONNECTED);
@@ -127,6 +127,7 @@ class ConnectionManager extends Observable {
             if (!foundAndConnected) {
                 console.log(`[ConnectionManager] Could not reconnect to ${this._lastConnectedDeviceUUID} within scan period.`);
                 this.setState(ConnectionState.DISCONNECTED);
+                setTimeout(this.reconnect, 5000); // Retry after 5 seconds
             }
         }
     }

@@ -69,7 +69,7 @@ const togglePasswordVisibility = () => {
                     password.value = 'N/A';
                     return;
                 }
-                password.value = fetchedPassword.m || 'Err';
+                password.value = fetchedPassword?.m || 'Err';
             })
             .catch((error) => {
                 console.error("Failed to fetch password:", error);
