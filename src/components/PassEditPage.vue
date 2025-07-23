@@ -104,6 +104,7 @@ const savePassword = async () => {
         alert('Password updated successfully!');
         $navigateBack();
     }
+    const layoutValue = LAYOUT_OPTIONS[selectedLayout.value]?.value ?? 0;
     if (isEditMode.value) {
         // Edit existing password
         if (!name.value) {
@@ -111,7 +112,7 @@ const savePassword = async () => {
             return;
         }
         try {
-            await saveAndReturn(parseInt(uid.value), name.value, password.value, selectedLayout.value);
+            await saveAndReturn(parseInt(uid.value), name.value, password.value, layoutValue);
         } catch (error) {
             console.error("Failed to update password:", error);
             alert(`Failed to update password: ${error.message || error}`);
@@ -123,7 +124,7 @@ const savePassword = async () => {
             return;
         }
         try {
-            await saveAndReturn(passwordStore.entries.length, name.value, password.value, selectedLayout.value);
+            await saveAndReturn(passwordStore.entries.length, name.value, password.value, layoutValue);
         } catch (error) {
             console.error("Failed to save password:", error);
             alert(`Failed to save password: ${error.message || error}`);
