@@ -55,11 +55,12 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, computed, watch, $navigateTo, $showModal } from 'nativescript-vue';
+import { eventBus } from '../services/event-bus';
 import { Peripheral } from '@nativescript-community/ble';
 import { ApplicationSettings, Dialogs } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
 import { connectionManager, ConnectionState } from '../services/connection-manager';
-import { PASSPHRASE_KEY } from '../services/settings';
+import { PASSPHRASE_KEY, LAST_DEVICE_KEY } from '../services/settings';
 import Settings from './Settings.vue';
 import PassEditPage from './PassEditPage.vue';
 import AdvancedOptions from './AdvancedOptions.vue';
@@ -75,6 +76,7 @@ const discoveredDevices = ref<Partial<Peripheral>[]>([]);
 const statusMessage = ref('App started. Loading...');
 const currentMode = ref<'disconnected' | 'connecting' | 'list'>('disconnected');
 const selectedPasswordEntry = ref<PasswordEntry | null>(null);
+const startupLogicHasRun = ref(false);
 
 // Advanced Options
 const endWithReturn = ref(true); // Default to true
@@ -105,14 +107,30 @@ const actionBarTitle = computed(() => {
     }
 });
 
-import { eventBus } from '../services/event-bus';
-
 onMounted(() => {
     connectionManager.on('propertyChange', (args) => {
         if (args.propertyName === 'state') {
             handleConnectionStateChange(args.value);
         }
     });
+
+    eventBus.on('list-needs-refresh', () => {
+        setTimeout(() => {
+            loadPasswordList(true);
+        }, 100);
+    });
+});
+
+const onNavigatedTo = () => {
+    if (startupLogicHasRun.value) {
+        // When navigating back to this page, refresh the password list if we are in list mode.
+        if (currentMode.value === 'list') {
+            loadPasswordList(false);
+        }
+        return;
+    }
+
+    startupLogicHasRun.value = true;
 
     // Initial state handling
     handleConnectionStateChange(connectionManager.state);
@@ -138,12 +156,12 @@ onMounted(() => {
     const savedSelectedLayout = ApplicationSettings.getNumber(SETTING_SELECTED_LAYOUT, 0);
     selectedLayout.value = savedSelectedLayout;
 
-    eventBus.on('list-needs-refresh', () => {
-        setTimeout(() => {
-            loadPasswordList(true);
-        }, 100);
-    });
-});
+    // Auto-connect to the last device
+    const lastDeviceUUID = ApplicationSettings.getString(LAST_DEVICE_KEY);
+    if (lastDeviceUUID) {
+        connectToDevice({ UUID: lastDeviceUUID });
+    }
+};
 
 const handleConnectionStateChange = (newState: ConnectionState) => {
     switch (newState) {
@@ -356,13 +374,6 @@ const openAdvancedOptions = async () => {
         endWithReturn.value = result.endWithReturn;
         useLayoutOverride.value = result.useLayoutOverride;
         selectedLayout.value = result.selectedLayout;
-    }
-};
-
-const onNavigatedTo = () => {
-    // When navigating back to this page, refresh the password list if we are in list mode.
-    if (currentMode.value === 'list') {
-        loadPasswordList(false);
     }
 };
 </script>
