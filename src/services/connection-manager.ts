@@ -13,7 +13,8 @@ class ConnectionManager extends Observable {
     private _state: ConnectionState = ConnectionState.DISCONNECTED;
     private _connectedPeripheral: Peripheral | null = null;
     private _lastConnectedDeviceUUID: string | null = ApplicationSettings.getString(LAST_DEVICE_KEY) || null;
-    private isConnecting = false; // Flag to prevent concurrent connection attempts
+    private isConnecting = false;
+    private reconnectTimer: any = null;
 
     constructor() {
         super();
@@ -22,8 +23,8 @@ class ConnectionManager extends Observable {
 
     private async init() {
         await deviceAPI.requestPermissions();
-        if (await deviceAPI.isBluetoothEnabled() && this._lastConnectedDeviceUUID) {
-            this.connect({ UUID: this._lastConnectedDeviceUUID } as Peripheral);
+        if (await deviceAPI.isBluetoothEnabled()) {
+            this.startReconnectTimer();
         }
     }
 
@@ -51,19 +52,20 @@ class ConnectionManager extends Observable {
         if (this.state !== ConnectionState.DISCONNECTED) {
             return;
         }
+        // Stop the reconnect timer when a manual scan is initiated
+        this.stopReconnectTimer();
         return deviceAPI.startScan(onDeviceDiscovered);
     }
 
     async connect(peripheral: Peripheral): Promise<void> {
-        // Guard against connecting if already connected or a connection is in progress.
         if (
             (this.state === ConnectionState.CONNECTED && this._connectedPeripheral?.UUID === peripheral.UUID) ||
             this.isConnecting
         ) {
-            console.log('[ConnectionManager] Connect called while already connected or connecting. Ignoring.');
             return;
         }
 
+        this.stopReconnectTimer();
         this.isConnecting = true;
         this.setState(ConnectionState.CONNECTING);
 
@@ -76,6 +78,7 @@ class ConnectionManager extends Observable {
         } catch (error) {
             console.error(`[ConnectionManager] Connection error: ${error}`);
             this.setState(ConnectionState.DISCONNECTED);
+            this.startReconnectTimer(); // Restart the timer on a failed connection
         } finally {
             this.isConnecting = false;
         }
@@ -88,6 +91,7 @@ class ConnectionManager extends Observable {
     }
 
     private onConnected(peripheral: Peripheral) {
+        this.stopReconnectTimer();
         this.setConnectedPeripheral(peripheral);
         this.setState(ConnectionState.CONNECTED);
         this._lastConnectedDeviceUUID = peripheral.UUID;
@@ -98,6 +102,28 @@ class ConnectionManager extends Observable {
         this.setConnectedPeripheral(null);
         this.setState(ConnectionState.DISCONNECTED);
         console.log(`[ConnectionManager] Disconnected from ${peripheral.UUID}.`);
+        this.startReconnectTimer();
+    }
+
+    private startReconnectTimer() {
+        if (this.reconnectTimer || !this._lastConnectedDeviceUUID) {
+            return;
+        }
+        console.log('[ConnectionManager] Starting reconnect timer.');
+        this.reconnectTimer = setInterval(() => {
+            if (this.state === ConnectionState.DISCONNECTED && !this.isConnecting) {
+                console.log('[ConnectionManager] Timer attempting to reconnect...');
+                this.connect({ UUID: this._lastConnectedDeviceUUID } as Peripheral);
+            }
+        }, 2000);
+    }
+
+    private stopReconnectTimer() {
+        if (this.reconnectTimer) {
+            console.log('[ConnectionManager] Stopping reconnect timer.');
+            clearInterval(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
     }
 }
 
