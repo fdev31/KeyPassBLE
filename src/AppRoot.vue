@@ -9,14 +9,28 @@
 import { ref, onMounted } from 'nativescript-vue';
 import Home from './components/Home.vue';
 import SplashScreen from './components/SplashScreen.vue';
+import { eventBus } from './services/event-bus';
 
 const showSplash = ref(true);
 
 onMounted(() => {
-    // The splash screen will be visible for a minimum of 1 second.
+    let timerElapsed = false;
+    let loadComplete = false;
+
+    function hideSplashScreenIfReady() {
+        if (timerElapsed && loadComplete) {
+            showSplash.value = false;
+        }
+    }
+
     setTimeout(() => {
-        showSplash.value = false;
-    }, 1000);
+        timerElapsed = true;
+        hideSplashScreenIfReady();
+    }, 2000);
+
+    eventBus.on('initial-load-complete', () => {
+        loadComplete = true;
+        hideSplashScreenIfReady();
+    });
 });
 </script>
-

@@ -161,6 +161,7 @@ const onNavigatedTo = () => {
     if (lastDeviceUUID) {
         connectToDevice({ UUID: lastDeviceUUID });
     }
+    eventBus.emit('initial-load-complete');
 };
 
 const handleConnectionStateChange = (newState: ConnectionState) => {

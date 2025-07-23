@@ -1,8 +1,5 @@
 import { createApp } from 'nativescript-vue';
 import AppRoot from './AppRoot.vue';
-import Home from './components/Home.vue';
-import Settings from './components/Settings.vue';
-import TestPage from './components/TestPage.vue';
 import { Trace } from '@nativescript/core';
 import {DEVMODE} from './services/settings';
 

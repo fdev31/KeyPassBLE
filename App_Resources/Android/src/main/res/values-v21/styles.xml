@@ -31,4 +31,13 @@
         <!-- Add padding to the ActionBar - useful when android:windowTranslucentStatus is set to true -->
         <!-- <item name="android:paddingTop">24dp</item> -->
     </style>
+
+     <style name="NativeScriptSplashScreenTheme" parent="NativeScriptSplashScreenThemeBase">
+        <item name="android:windowTranslucentStatus">
+            true
+        </item>
+        <item name="android:statusBarColor">
+            @android:color/transparent
+        </item>
+    </style>
 </resources>
