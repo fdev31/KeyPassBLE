@@ -19,6 +19,11 @@
                 <Label text="Keyboard Layout" class="setting-label"></Label>
                 <ListPicker :items="layoutLabels" v-model="selectedLayout" class="list-picker" />
 
+                <GridLayout v-if="isEditMode && passwordChanged" columns="*,*" class="type-buttons-container">
+                    <Button col="0" text="Type New" @tap="typeNewPassword" class="btn btn-secondary"></Button>
+                    <Button col="1" text="Type Current" @tap="typeCurrentPassword" class="btn btn-secondary"></Button>
+                </GridLayout>
+
                 <Button text="Save" @tap="savePassword" class="btn btn-primary save-button"></Button>
             </StackLayout>
         </ScrollView>
@@ -38,6 +43,8 @@ const selectedLayout = ref(0); // Default to FR
 const uid = ref<string | null>(null);
 const isEditMode = ref(false);
 
+const passwordChanged = computed(() => password.value !== '');
+
 const LAYOUT_OPTIONS = [
     { label: 'Bitlocker', value: -1 },
     { label: 'FR', value: 0 },
@@ -53,10 +60,11 @@ const onNavigatingTo = (event: NavigatedData) => {
     const context = event.context as any;
     if (context && context.propsData && context.propsData.passwordEntry) {
         const passwordEntry = context.propsData.passwordEntry;
-        isEditMode.value = true;
+        isEditMode.value = !!passwordEntry.name; // Only edit mode if name exists
+
         name.value = passwordEntry.name;
         uid.value = passwordEntry.uid;
-        selectedLayout.value = passwordEntry.layout + 1;
+        selectedLayout.value = (passwordEntry.layout ?? 0) + 1;
     }
 };
 
@@ -91,6 +99,24 @@ const generatePassword = () => {
         newPassword += charset.charAt(Math.floor(Math.random() * n));
     }
     password.value = newPassword;
+};
+
+const typeNewPassword = async () => {
+    try {
+        await deviceAPI.typeRaw(password.value);
+    } catch (error) {
+        console.error("Failed to type new password:", error);
+        alert(`Failed to type new password: ${error.message || error}`);
+    }
+};
+
+const typeCurrentPassword = async () => {
+    try {
+        await deviceAPI.typePass(parseInt(uid.value));
+    } catch (error) {
+        console.error("Failed to type current password:", error);
+        alert(`Failed to type current password: ${error.message || error}`);
+    }
 };
 
 const savePassword = async () => {
@@ -183,6 +209,10 @@ const savePassword = async () => {
     width: auto;
     padding-top: 8;
     padding-bottom: 8;
+}
+
+.type-buttons-container {
+    margin-top: 16;
 }
 
 .save-button {

@@ -1,5 +1,5 @@
 <template>
-    <GridLayout horizontalAlignment="center" verticalAlignment="center" class="modal-container-wrapper" row="0" col="0" rows="*, auto, *" columns="*">
+    <GridLayout verticalAlignment="center" class="modal-container-wrapper" row="0" col="0" rows="*, auto, *" columns="*">
         <StackLayout class="modal-container" row="1" horizontalAlignment="center" verticalAlignment="center">
             <Label text="Advanced Options" class="modal-title"></Label>
 
