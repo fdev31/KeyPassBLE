@@ -1,13 +1,17 @@
 <template>
-    <GridLayout verticalAlignment="center" class="modal-container-wrapper">
-        <StackLayout class="modal-container">
+    <GridLayout horizontalAlignment="center" verticalAlignment="center" class="modal-container-wrapper" row="0" col="0" rows="*, auto, *" columns="*">
+        <StackLayout class="modal-container" row="1" horizontalAlignment="center" verticalAlignment="center">
             <Label text="Advanced Options" class="modal-title"></Label>
-            
-            <Label text="End with Return Key" class="option-label"></Label>
-            <Switch v-model="localEndWithReturn" class="option-switch"></Switch>
 
-            <Label text="Use Layout Override" class="option-label"></Label>
-            <Switch v-model="localUseLayoutOverride" class="option-switch"></Switch>
+            <GridLayout columns="*, auto" class="option-container">
+                <Label col="0" text="End with Return Key" class="option-label"></Label>
+                <Switch col="1" v-model="localEndWithReturn" class="option-switch"></Switch>
+            </GridLayout>
+
+            <GridLayout columns="*, auto" class="option-container">
+                <Label col="0" text="Use Layout Override" class="option-label"></Label>
+                <Switch col="1" v-model="localUseLayoutOverride" class="option-switch"></Switch>
+            </GridLayout>
 
             <Label text="Keyboard Layout" class="option-label"></Label>
             <ListPicker :items="layoutLabels" v-model="localSelectedLayout" :isEnabled="localUseLayoutOverride" class="list-picker" />
@@ -70,8 +74,19 @@ const closeModal = () => {
     text-align: center;
     margin-bottom: 16;
 }
-.option-label { font-size: 16; font-weight: bold; margin-top: 8; margin-bottom: 4; color: #111827; }
-.option-switch { margin-bottom: 8; }
+.option-container {
+    margin-top: 8;
+    margin-bottom: 8;
+}
+.option-label {
+    font-size: 16;
+    font-weight: bold;
+    color: #111827;
+    vertical-align: middle;
+}
+.option-switch {
+    vertical-align: middle;
+}
 .list-picker { height: 120; }
 .action-buttons { margin-top: 16; }
 .btn {
