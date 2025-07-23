@@ -100,6 +100,10 @@ class DeviceAPI {
         return this.backend.sendCommand({ cmd: "dump" }, 10000, 'text');
     }
 
+    dumpOne(uid: Number): Promise<string> {
+        return this.backend.sendCommand({ cmd: "dumpOne", uid }, 10000, 'text');
+    }
+
     restore(data: string): Promise<string> {
         return this.backend.sendCommand({ cmd: "restore", data });
     }

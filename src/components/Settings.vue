@@ -33,8 +33,8 @@
                     </StackLayout>
                 </StackLayout>
             </ScrollView>
-            <GridLayout v-if="isRestoring" class="overlay" rows="auto" verticalAlignment="middle">
-                <Progress :value="restoreProgress" class="progress-bar"></Progress>
+            <GridLayout v-if="isBusy" class="overlay" rows="auto" verticalAlignment="middle">
+                <Progress :value="progress" maxValue="100" class="progress-bar"></Progress>
             </GridLayout>
         </GridLayout>
     </Page>
@@ -53,8 +53,8 @@ const passphrase = ref('');
 const showPassphrase = ref(false);
 const restoreData = ref('');
 const isRestoreDataFocused = ref(false);
-const isRestoring = ref(false);
-const restoreProgress = ref(0);
+const isBusy = ref(false);
+const progress = ref(0);
 
 const originalPassphrase = ref(''); // To track if passphrase changed
 
@@ -94,21 +94,44 @@ const saveSettings = async () => {
 };
 
 const backup = async () => {
+    isBusy.value = true;
+    progress.value = 0;
     try {
-        const dumpData = await deviceAPI.dump();
+        let fullDump = [];
+        let index = 0;
+        let expectedLength = -1;
+
+        while (true) {
+            const entry = await deviceAPI.dumpOne(index);
+            if (index === 0) {
+                if (!entry) break;
+                expectedLength = entry.length;
+            } else {
+                if (!entry || entry.length < expectedLength) {
+                    break;
+                }
+            }
+            
+            fullDump.push(entry);
+            progress.value = (index * 10) % 100;
+            index++;
+        }
+        const dumpData = fullDump.join('\n');
         await Clipboard.setText(dumpData);
-        alert('Backup data copied to clipboard!');
+        alert(`${index} passwords dumped and copied to clipboard!`);
     } catch (error) {
         console.error("Backup failed:", error);
         alert(`Backup failed: ${error.message || error}`);
+    } finally {
+        isBusy.value = false;
     }
 };
 
 import { eventBus } from '../services/event-bus';
 
 const restore = async () => {
-    isRestoring.value = true;
-    restoreProgress.value = 0;
+    isBusy.value = true;
+    progress.value = 0;
     try {
         let dumpData = restoreData.value.trim();
 
@@ -135,7 +158,7 @@ const restore = async () => {
             console.log(`restore entry ${index}: ${trimmedLine}`);
             await deviceAPI.restoreOne(index, trimmedLine);
             index++;
-            restoreProgress.value = (index / totalLines) * 100;
+            progress.value = (index / totalLines) * 100;
         }
         alert('Restore successful!');
         eventBus.notify({ eventName: 'list-needs-refresh' });
@@ -143,7 +166,7 @@ const restore = async () => {
         console.error("Restore failed:", error);
         alert(`Restore failed: ${error.message || error}`);
     } finally {
-        isRestoring.value = false;
+        isBusy.value = false;
     }
 };
 </script>
