@@ -95,11 +95,11 @@ const generatePassword = () => {
 
 const savePassword = async () => {
     const saveAndReturn = async (uid, name, password, layout) => {
-        await deviceAPI.savePass(uid, name, password, layout);
+        await deviceAPI.editPass(uid, name, password, layout);
         passwordStore.addOrUpdate({
-          uid: uid.value,
-          name: name.value,
-          layout: selectedLayout.value,
+          uid: uid,
+          name: name,
+          layout: layout,
         });
         alert('Password updated successfully!');
         $navigateBack();
