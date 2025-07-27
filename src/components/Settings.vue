@@ -2,6 +2,12 @@
     <Page>
         <ActionBar title="Settings" class="action-bar">
             <NavigationButton text="Back" />
+            <ActionItem v-if="isIOS" @tap="saveSettings"
+                ios.systemIcon="16" ios.position="right">
+            </ActionItem>
+            <ActionItem v-if="!isIOS" @tap="saveSettings"
+                android.systemIcon="ic_menu_save" android.position="actionBar">
+            </ActionItem>
         </ActionBar>
         <GridLayout rows="*" columns="*">
             <ScrollView row="0" col="0">
@@ -16,13 +22,10 @@
                         <Button col="1" :text="showPassphrase ? 'Hide' : 'Show'" @tap="togglePassphraseVisibility" class="btn btn-secondary toggle-button"></Button>
                     </GridLayout>
 
-                    <Button text="Save Settings" @tap="saveSettings" class="btn btn-primary save-button"></Button>
-                    <Button text="Set WiFi Password" @tap="setWifiPassword" class="btn btn-secondary wifi-button"></Button>
-
                     <Label text="Backup and Restore" class="setting-label"></Label>
                     <StackLayout>
                         <Button text="Backup" @tap="backup" class="btn btn-secondary backup-button"></Button>
-                        
+
                         <Label text="Recent Backups" class="setting-label" v-if="backups.length > 0"></Label>
                         <ListView :items="backups" class="backup-list">
                             <template v-slot:default="{ item }">
@@ -43,6 +46,9 @@
                         ></TextView>
                     </StackLayout>
 
+                    <Label text="WiFi Connectivity" class="setting-label"></Label>
+                    <Button text="Set WiFi Password" @tap="setWifiPassword" class="btn btn-secondary"></Button>
+
                     <Label text="Danger Zone" class="setting-label danger-zone-label"></Label>
                     <Button text="Factory Reset" @tap="factoryReset" class="btn btn-danger"></Button>
                 </StackLayout>
@@ -60,7 +66,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'nativescript-vue';
-import { ApplicationSettings, Dialogs } from '@nativescript/core';
+import { ApplicationSettings, Dialogs, isIOS } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
 import { PASSPHRASE_KEY, SETTING_DEVICE_NAME } from '../services/settings';
 import * as Clipboard from 'nativescript-clipboard';
@@ -223,7 +229,7 @@ const backup = async () => {
                     break;
                 }
             }
-            
+
             fullDump.push(entry);
             if (totalPasswords > 0) {
                 progress.value = Math.min(100, ((index + 1) / totalPasswords) * 100);
@@ -259,7 +265,7 @@ const restore = async () => {
             alert('Clipboard is empty and no data in text area. Copy backup data to clipboard or paste in text area first.');
             return;
         }
-        
+
         const lines = dumpData.split('\n').filter(line => {
             const trimmedLine = line.trim();
             return trimmedLine && !trimmedLine.startsWith('#');
@@ -363,12 +369,10 @@ const factoryReset = async () => {
     border-radius: 8;
     font-size: 16;
     padding: 12;
-}
-
-.btn-primary {
-    background-color: #4F46E5;
-    color: white;
-    margin-top: 16;
+    margin-top: 8;
+    margin-bottom: 8;
+    horizontal-align: center;
+    width: 90%;
 }
 
 .btn-secondary {
@@ -379,14 +383,9 @@ const factoryReset = async () => {
 .toggle-button {
     margin-left: 8;
     width: auto; /* Adjust width to content */
-}
-
-.save-button {
-    margin-top: 24;
-}
-
-.wifi-button {
-    margin-top: 8;
+    margin-top: 0;
+    margin-bottom: 0;
+    horizontal-align: right;
 }
 
 .danger-zone-label {
@@ -396,7 +395,6 @@ const factoryReset = async () => {
 .btn-danger {
     background-color: #DC2626; /* Red-600 */
     color: white;
-    margin-top: 8;
 }
 
 .overlay {
