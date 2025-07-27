@@ -6,18 +6,18 @@
         <ScrollView>
             <StackLayout class="page-container">
                 <Label text="Name" class="setting-label"></Label>
-                <TextField v-model="name" hint="Enter a name for the password" class="setting-input"></TextField>
+                <TextField v-model="form.name" hint="Enter a name for the password" class="setting-input"></TextField>
 
                 <Label text="Password" class="setting-label"></Label>
                 <Label v-if="isEditMode" text="(Leave blank to keep current password)" class="setting-label" style="font-size: 12; margin-top: -8; margin-bottom: 8;"></Label>
                 <GridLayout columns="*, auto, auto" verticalAlignment="center">
-                    <TextField col="0" v-model="password" :secure="!showPassword" hint="Enter password" class="setting-input" style="margin-bottom: 0;"></TextField>
+                    <TextField col="0" v-model="form.password" :secure="!showPassword" hint="Enter password" class="setting-input" style="margin-bottom: 0;"></TextField>
                     <Button col="1" :text="showPassword ? 'Hide' : 'Show'" @tap="togglePasswordVisibility" class="btn btn-secondary toggle-button"></Button>
                     <Button col="2" text="🎲" @tap="generatePassword" class="btn btn-secondary toggle-button"></Button>
                 </GridLayout>
 
                 <Label text="Keyboard Layout" class="setting-label"></Label>
-                <ListPicker :items="layoutLabels" v-model="selectedLayout" class="list-picker" />
+                <ListPicker :items="layoutLabels" v-model="layoutIndex" class="list-picker" />
 
                 <GridLayout v-if="isEditMode && passwordChanged" columns="*,*" class="type-buttons-container">
                     <Button col="0" text="Type New" @tap="typeNewPassword" class="btn btn-secondary"></Button>
@@ -31,72 +31,97 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, $navigateBack } from 'nativescript-vue';
+import { ref, computed, reactive, $navigateBack } from 'nativescript-vue';
 import { deviceAPI } from '../services/device-api';
 import { NavigatedData } from '@nativescript/core';
 import { passwordStore } from '../services/store';
 
-const name = ref('');
-const password = ref('');
-const showPassword = ref(false);
-const selectedLayout = ref(0); // Default to FR
-const uid = ref<string | null>(null);
-const isEditMode = ref(false);
-const originalPasswordEntry = ref(null);
+// Define a type for our password entries for clarity
+interface PasswordEntry {
+    uid: number;
+    name: string;
+    layout: number;
+    len: number;
+}
 
-const passwordChanged = computed(() => password.value !== '');
-
+// Keep layout options separate
 const LAYOUT_OPTIONS = [
     { label: 'Bitlocker', value: -1 },
     { label: 'FR', value: 0 },
     { label: 'US', value: 1 },
 ];
+const layoutLabels = LAYOUT_OPTIONS.map(opt => opt.label);
 
-const layoutLabels = computed(() => LAYOUT_OPTIONS.map(opt => opt.label));
+// This will hold the state of the form
+const form = reactive({
+    name: '',
+    password: '', // This will always be the new password
+    layout: 0,
+});
+
+// This will hold the original password entry when in edit mode
+const originalPassword = ref<PasswordEntry | null>(null);
+
+const isEditMode = computed(() => originalPassword.value !== null);
+
+// The password from the form has been changed by the user
+const passwordChanged = computed(() => form.password !== '');
+
+// For the ListPicker v-model
+const layoutIndex = computed({
+    get: () => {
+        const index = LAYOUT_OPTIONS.findIndex(opt => opt.value === form.layout);
+        return index === -1 ? 1 : index; // Default to FR
+    },
+    set: (index) => {
+        form.layout = LAYOUT_OPTIONS[index].value;
+    }
+});
 
 const onNavigatingTo = (event: NavigatedData) => {
-    if (event.isBack) {
-        return;
-    }
-    const context = event.context as any;
-    if (context && context.propsData && context.propsData.passwordEntry) {
-        const passwordEntry = context.propsData.passwordEntry;
-        originalPasswordEntry.value = passwordEntry;
-        isEditMode.value = !!passwordEntry.name; // Only edit mode if name exists
+    if (event.isBack) return;
 
-        name.value = passwordEntry.name;
-        uid.value = passwordEntry.uid;
-        selectedLayout.value = (passwordEntry.layout ?? 0) + 1;
+    const context = event.context as any;
+    const entry = context?.propsData?.passwordEntry as PasswordEntry;
+
+    if (entry && entry.name) { // We are editing an existing password
+        originalPassword.value = entry;
+        form.name = entry.name;
+        form.layout = entry.layout ?? 0;
+        form.password = ''; // Start with an empty password field
+    } else { // We are adding a new password
+        originalPassword.value = null;
+        form.name = '';
+        form.password = '';
+        form.layout = 0; // Default to FR
     }
 };
 
+const showPassword = ref(false);
+
 const togglePasswordVisibility = () => {
     showPassword.value = !showPassword.value;
-    if (password.value.length == 0) {
-        deviceAPI.fetchPass(uid.value)
-            .then((fetchedPassword) => {
-                if (fetchedPassword === null) {
-                    password.value = 'N/A';
-                    return;
-                }
-                password.value = fetchedPassword?.m || 'Err';
+    // If we are in edit mode, and we want to show the password,
+    // but the new password field is empty, we should fetch the current password.
+    if (isEditMode.value && showPassword.value && !form.password) {
+        deviceAPI.fetchPass(originalPassword.value.uid)
+            .then(fetched => {
+                // We put the fetched password into the form.password field
+                // so the user can see it and edit it.
+                form.password = fetched?.m || 'N/A';
             })
-            .catch((error) => {
+            .catch(error => {
                 console.error("Failed to fetch password:", error);
                 alert(`Failed to fetch password: ${error.message || error}`);
-            })
-        ;
+            });
     }
 };
 
 const generatePassword = () => {
-    let length = password.value.length;
-    if (isEditMode.value && length === 0 && originalPasswordEntry.value?.len) {
-        length = originalPasswordEntry.value.len;
-    }
-
+    // Use the length of the original password if available, otherwise default to 16
+    const length = isEditMode.value ? originalPassword.value.len : 16;
     if (length === 0) {
-        alert("Please enter a password to set the length for generation.");
+        alert("Cannot determine password length. Please set a password manually first.");
         return;
     }
     const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{};:,.<>/?";
@@ -104,63 +129,55 @@ const generatePassword = () => {
     for (let i = 0, n = charset.length; i < length; ++i) {
         newPassword += charset.charAt(Math.floor(Math.random() * n));
     }
-    password.value = newPassword;
+    form.password = newPassword;
 };
 
+// This function now makes more sense. It types the password from the input field.
 const typeNewPassword = async () => {
+    if (!form.password) {
+        alert("Password field is empty.");
+        return;
+    }
     try {
-        await deviceAPI.typeRaw(password.value);
+        await deviceAPI.typeRaw(form.password);
     } catch (error) {
-        console.error("Failed to type new password:", error);
         alert(`Failed to type new password: ${error.message || error}`);
     }
 };
 
+// This function types the original password, not what's in the input field.
 const typeCurrentPassword = async () => {
+    if (!isEditMode.value) return;
     try {
-        await deviceAPI.typePass(parseInt(uid.value));
+        await deviceAPI.typePass(originalPassword.value.uid);
     } catch (error) {
-        console.error("Failed to type current password:", error);
         alert(`Failed to type current password: ${error.message || error}`);
     }
 };
 
 const savePassword = async () => {
-    const saveAndReturn = async (uid, name, password, layout) => {
-        await deviceAPI.editPass(uid, name, password, layout);
-        passwordStore.addOrUpdate({
-          uid: uid,
-          name: name,
-          layout: layout,
-        });
-        alert('Password updated successfully!');
-        $navigateBack();
+    if (!form.name || (!form.password && !isEditMode.value)) {
+        alert('Please fill in all required fields.');
+        return;
     }
-    const layoutValue = LAYOUT_OPTIONS[selectedLayout.value]?.value ?? 0;
-    if (isEditMode.value) {
-        // Edit existing password
-        if (!name.value) {
-            alert('Please enter a name.');
-            return;
-        }
-        try {
-            await saveAndReturn(parseInt(uid.value), name.value, password.value, layoutValue);
-        } catch (error) {
-            console.error("Failed to update password:", error);
-            alert(`Failed to update password: ${error.message || error}`);
-        }
-    } else {
-        // Add new password
-        if (!name.value || !password.value) {
-            alert('Please fill in both name and password.');
-            return;
-        }
-        try {
-            await saveAndReturn(passwordStore.entries.length, name.value, password.value, layoutValue);
-        } catch (error) {
-            console.error("Failed to save password:", error);
-            alert(`Failed to save password: ${error.message || error}`);
-        }
+
+    const uidToSave = isEditMode.value ? originalPassword.value.uid : passwordStore.entries.length;
+
+    try {
+        await deviceAPI.editPass(uidToSave, form.name, form.password, form.layout);
+        
+        const newLen = form.password ? form.password.length : originalPassword.value?.len;
+
+        passwordStore.addOrUpdate({
+            uid: uidToSave,
+            name: form.name,
+            layout: form.layout,
+            len: newLen,
+        });
+        alert('Password saved successfully!');
+        $navigateBack();
+    } catch (error) {
+        alert(`Failed to save password: ${error.message || error}`);
     }
 };
 </script>

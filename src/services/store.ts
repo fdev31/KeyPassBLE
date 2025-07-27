@@ -2,7 +2,7 @@ import { ref } from 'nativescript-vue';
 import { ApplicationSettings } from '@nativescript/core';
 
 export interface PasswordEntry {
-  uid: string;
+  uid: number;
   name: string;
   layout?: number;
 }
