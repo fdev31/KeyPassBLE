@@ -72,7 +72,9 @@ import { PASSPHRASE_KEY, SETTING_DEVICE_NAME } from '../services/settings';
 import * as Clipboard from 'nativescript-clipboard';
 import { passwordStore } from '../services/store';
 import { localize as L } from '@nativescript/localize';
+import { SecureStorage } from '@heywhy/ns-secure-storage';
 
+const secureStorage = new SecureStorage();
 
 const BACKUPS_KEY = 'password_backups';
 
@@ -95,10 +97,10 @@ const backupButtonText = computed(() => {
 
 // Application Settings Keys
 
-onMounted(() => {
+onMounted(async () => {
     // Load existing settings
     deviceName.value = ApplicationSettings.getString(SETTING_DEVICE_NAME, 'KeyPass');
-    passphrase.value = ApplicationSettings.getString(PASSPHRASE_KEY, '');
+    passphrase.value = await secureStorage.get({ key: PASSPHRASE_KEY }) || '';
     originalPassphrase.value = passphrase.value; // Store original passphrase
     loadBackups();
 });
@@ -202,16 +204,16 @@ const formatBackupDate = (dateString) => {
     }
 };
 
-const togglePassphraseVisibility = () => {
+const togglePassphraseVisibility = async () => {
     showPassphrase.value = !showPassphrase.value;
     if (passphrase.value.length == 0) {
-        passphrase.value = ApplicationSettings.getString(PASSPHRASE_KEY, 'N/A');
+        passphrase.value = await secureStorage.get({ key: PASSPHRASE_KEY }) || 'N/A';
     }
 };
 
 const saveSettings = async () => {
     ApplicationSettings.setString(SETTING_DEVICE_NAME, deviceName.value);
-    ApplicationSettings.setString(PASSPHRASE_KEY, passphrase.value);
+    await secureStorage.set({ key: PASSPHRASE_KEY, value: passphrase.value });
 
     // Only update device passphrase if it has changed
     if (passphrase.value !== originalPassphrase.value) {

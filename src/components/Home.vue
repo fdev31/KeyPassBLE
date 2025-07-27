@@ -65,6 +65,9 @@ import PassEditPage from './PassEditPage.vue';
 import AdvancedOptions from './AdvancedOptions.vue';
 import { passwordStore, appStore } from '../services/store';
 import { localize as L } from '@nativescript/localize';
+import { SecureStorage } from '@heywhy/ns-secure-storage';
+
+const secureStorage = new SecureStorage();
 
 interface PasswordEntry {
     uid: string;
@@ -188,7 +191,7 @@ const handleConnectionStateChange = (newState: ConnectionState) => {
 
 const authenticateAndLoadList = async () => {
     try {
-        let passphrase = ApplicationSettings.getString(PASSPHRASE_KEY);
+        let passphrase = await secureStorage.get({ key: PASSPHRASE_KEY });
         if (!passphrase) {
             const result = await Dialogs.prompt({
                 title: L('enter_passphrase_title'),
@@ -200,7 +203,7 @@ const authenticateAndLoadList = async () => {
 
             if (result.result && result.text) {
                 passphrase = result.text;
-                ApplicationSettings.setString(PASSPHRASE_KEY, passphrase);
+                await secureStorage.set({ key: PASSPHRASE_KEY, value: passphrase });
             } else {
                 connectionManager.disconnect();
                 return;
