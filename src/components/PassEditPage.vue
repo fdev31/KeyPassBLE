@@ -1,30 +1,30 @@
 <template>
     <Page @navigatingTo="onNavigatingTo">
-        <ActionBar :title="isEditMode ? 'Edit Password' : 'Add New Password'" class="action-bar">
-            <NavigationButton text="Back" />
+        <ActionBar :title="isEditMode ? L('edit_password') : L('add_new_password')" class="action-bar">
+            <NavigationButton :text="L('back')" />
         </ActionBar>
         <ScrollView>
             <StackLayout class="page-container">
-                <Label text="Name" class="setting-label"></Label>
-                <TextField v-model="form.name" hint="Enter a name for the password" class="setting-input"></TextField>
+                <Label :text="L('name')" class="setting-label"></Label>
+                <TextField v-model="form.name" :hint="L('enter_name_for_password')" class="setting-input"></TextField>
 
-                <Label text="Password" class="setting-label"></Label>
-                <Label v-if="isEditMode" text="(Leave blank to keep current password)" class="setting-label" style="font-size: 12; margin-top: -8; margin-bottom: 8;"></Label>
+                <Label :text="L('password')" class="setting-label"></Label>
+                <Label v-if="isEditMode" :text="L('leave_blank_to_keep_password')" class="setting-label" style="font-size: 12; margin-top: -8; margin-bottom: 8;"></Label>
                 <GridLayout columns="*, auto, auto" verticalAlignment="center">
-                    <TextField col="0" v-model="form.password" :secure="!showPassword" hint="Enter password" class="setting-input" style="margin-bottom: 0;"></TextField>
-                    <Button col="1" :text="showPassword ? 'Hide' : 'Show'" @tap="togglePasswordVisibility" class="btn btn-secondary toggle-button"></Button>
+                    <TextField col="0" v-model="form.password" :secure="!showPassword" :hint="L('enter_password')" class="setting-input" style="margin-bottom: 0;"></TextField>
+                    <Button col="1" :text="showPassword ? L('hide') : L('show')" @tap="togglePasswordVisibility" class="btn btn-secondary toggle-button"></Button>
                     <Button col="2" text="🎲" @tap="generatePassword" class="btn btn-secondary toggle-button"></Button>
                 </GridLayout>
 
-                <Label text="Keyboard Layout" class="setting-label"></Label>
+                <Label :text="L('keyboard_layout')" class="setting-label"></Label>
                 <ListPicker :items="layoutLabels" v-model="layoutIndex" class="list-picker" />
 
                 <GridLayout v-if="isEditMode && passwordChanged" columns="*,*" class="type-buttons-container">
-                    <Button col="0" text="Type New" @tap="typeNewPassword" class="btn btn-secondary"></Button>
-                    <Button col="1" text="Type Current" @tap="typeCurrentPassword" class="btn btn-secondary"></Button>
+                    <Button col="0" :text="L('type_new')" @tap="typeNewPassword" class="btn btn-secondary"></Button>
+                    <Button col="1" :text="L('type_current')" @tap="typeCurrentPassword" class="btn btn-secondary"></Button>
                 </GridLayout>
 
-                <Button text="Save" @tap="savePassword" class="btn btn-primary save-button"></Button>
+                <Button :text="L('save')" @tap="savePassword" class="btn btn-primary save-button"></Button>
             </StackLayout>
         </ScrollView>
     </Page>
@@ -35,6 +35,7 @@ import { ref, computed, reactive, $navigateBack } from 'nativescript-vue';
 import { deviceAPI } from '../services/device-api';
 import { NavigatedData } from '@nativescript/core';
 import { passwordStore } from '../services/store';
+import { localize as L } from '@nativescript/localize';
 
 // Define a type for our password entries for clarity
 interface PasswordEntry {
@@ -108,11 +109,11 @@ const togglePasswordVisibility = () => {
             .then(fetched => {
                 // We put the fetched password into the form.password field
                 // so the user can see it and edit it.
-                form.password = fetched?.m || 'N/A';
+                form.password = fetched?.m || L('not_available');
             })
             .catch(error => {
                 console.error("Failed to fetch password:", error);
-                alert(`Failed to fetch password: ${error.message || error}`);
+                alert(`${L('failed_to_fetch_password')} ${error.message || error}`);
             });
     }
 };
@@ -121,7 +122,7 @@ const generatePassword = () => {
     // Use the length of the original password if available, otherwise default to 16
     const length = isEditMode.value ? originalPassword.value.len : 16;
     if (length === 0) {
-        alert("Cannot determine password length. Please set a password manually first.");
+        alert(L('cannot_determine_password_length'));
         return;
     }
     const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{};:,.<>/?";
@@ -135,13 +136,13 @@ const generatePassword = () => {
 // This function now makes more sense. It types the password from the input field.
 const typeNewPassword = async () => {
     if (!form.password) {
-        alert("Password field is empty.");
+        alert(L('password_field_empty'));
         return;
     }
     try {
         await deviceAPI.typeRaw(form.password);
     } catch (error) {
-        alert(`Failed to type new password: ${error.message || error}`);
+        alert(`${L('failed_to_type_new_password')} ${error.message || error}`);
     }
 };
 
@@ -151,13 +152,13 @@ const typeCurrentPassword = async () => {
     try {
         await deviceAPI.typePass(originalPassword.value.uid);
     } catch (error) {
-        alert(`Failed to type current password: ${error.message || error}`);
+        alert(`${L('failed_to_type_current_password')} ${error.message || error}`);
     }
 };
 
 const savePassword = async () => {
     if (!form.name || (!form.password && !isEditMode.value)) {
-        alert('Please fill in all required fields.');
+        alert(L('fill_required_fields'));
         return;
     }
 
@@ -174,10 +175,10 @@ const savePassword = async () => {
             layout: form.layout,
             len: newLen,
         });
-        alert('Password saved successfully!');
+        alert(L('password_saved_successfully'));
         $navigateBack();
     } catch (error) {
-        alert(`Failed to save password: ${error.message || error}`);
+        alert(`${L('failed_to_save_password')} ${error.message || error}`);
     }
 };
 </script>

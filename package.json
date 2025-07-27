@@ -10,10 +10,13 @@
     "@nativescript-community/ble": "^3.1.22",
     "@nativescript-community/perms": "^3.0.4",
     "@nativescript/core": "8.9.5",
+    "@nativescript/localize": "^5.2.0",
     "@tailwindcss/postcss": "^4.1.11",
     "nativescript": "^8.9.3",
     "nativescript-clipboard": "^2.1.1",
-    "nativescript-vue": "3.0.1"
+    "nativescript-vue": "3.0.1",
+    "url": "^0.11.4",
+    "util": "^0.12.5"
   },
   "devDependencies": {
     "@nativescript/android": "8.9.1",

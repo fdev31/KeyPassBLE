@@ -1,8 +1,11 @@
 <template>
     <GridLayout class="splash-container">
-        <Label text="KeyPass" class="splash-text"></Label>
+        <Label :text="L('keypass')" class="splash-text"></Label>
     </GridLayout>
 </template>
+<script lang="ts" setup>
+import { localize as L } from '@nativescript/localize';
+</script>
 
 <style scoped>
 .splash-container {

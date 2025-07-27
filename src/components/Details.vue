@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref, $navigateBack } from 'nativescript-vue';
+import { localize as L } from '@nativescript/localize';
 
 const items = ref(
   Array(1000)
@@ -12,7 +13,7 @@ const items = ref(
   <Page actionBarHidden="true">
     <GridLayout rows="auto, *">
       <Label
-        text="Go Back"
+        :text="L('go_back')"
         @tap="$navigateBack"
         class="text-center px-4 py-10 text-2xl text-gray-900 font-bold"
       />

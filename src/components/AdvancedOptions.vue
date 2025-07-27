@@ -1,24 +1,24 @@
 <template>
     <GridLayout verticalAlignment="center" class="modal-container-wrapper" row="0" col="0" rows="*, auto, *" columns="*">
         <StackLayout class="modal-container" row="1" horizontalAlignment="center" verticalAlignment="center">
-            <Label text="Advanced Options" class="modal-title"></Label>
+            <Label :text="L('advanced_options')" class="modal-title"></Label>
 
             <GridLayout columns="*, auto" class="option-container">
-                <Label col="0" text="End with Return Key" class="option-label"></Label>
+                <Label col="0" :text="L('end_with_return_key')" class="option-label"></Label>
                 <Switch col="1" v-model="localEndWithReturn" class="option-switch"></Switch>
             </GridLayout>
 
             <GridLayout columns="*, auto" class="option-container">
-                <Label col="0" text="Use Layout Override" class="option-label"></Label>
+                <Label col="0" :text="L('use_layout_override')" class="option-label"></Label>
                 <Switch col="1" v-model="localUseLayoutOverride" class="option-switch"></Switch>
             </GridLayout>
 
-            <Label text="Keyboard Layout" class="option-label"></Label>
+            <Label :text="L('keyboard_layout')" class="option-label"></Label>
             <ListPicker :items="layoutLabels" v-model="localSelectedLayout" :isEnabled="localUseLayoutOverride" class="list-picker" />
 
             <GridLayout columns="*, *" class="action-buttons">
-                <Button col="0" text="Cancel" @tap="closeModal" class="btn btn-secondary"></Button>
-                <Button col="1" text="Apply" @tap="applyAndClose" class="btn btn-primary"></Button>
+                <Button col="0" :text="L('cancel')" @tap="closeModal" class="btn btn-secondary"></Button>
+                <Button col="1" :text="L('apply')" @tap="applyAndClose" class="btn btn-primary"></Button>
             </GridLayout>
         </StackLayout>
     </GridLayout>
@@ -27,6 +27,7 @@
 <script lang="ts" setup>
 import { ref, computed } from 'nativescript-vue';
 import { $closeModal } from 'nativescript-vue';
+import { localize as L } from '@nativescript/localize';
 
 const props = defineProps({
     endWithReturn: Boolean,

@@ -7,6 +7,12 @@ module.exports = (env) => {
 	webpack.chainWebpack((config) => {
     config.plugin('VueLoaderPlugin').use(VueLoaderPlugin);
 
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      "url": require.resolve("url/"),
+      "util": require.resolve("util/")
+    };
+
     config.module
       .rule('vue')
       .test(/\.vue$/)

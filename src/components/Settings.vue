@@ -1,7 +1,7 @@
 <template>
     <Page>
-        <ActionBar title="Settings" class="action-bar">
-            <NavigationButton text="Back" />
+        <ActionBar :title="L('settings')" class="action-bar">
+            <NavigationButton :text="L('back')" />
             <ActionItem v-if="isIOS" @tap="saveSettings"
                 ios.systemIcon="16" ios.position="right">
             </ActionItem>
@@ -13,24 +13,27 @@
             <ScrollView row="0" col="0">
                 <StackLayout class="page-container">
 
-                    <Label text="Device Name" class="setting-label"></Label>
-                    <TextField v-model="deviceName" hint="Enter device name" class="setting-input"></TextField>
+                    <Label :text="L('device_name')" class="setting-label"></Label>
+                    <TextField v-model="deviceName" :hint="L('enter_device_name')" class="setting-input"></TextField>
 
-                    <Label text="Passphrase" class="setting-label"></Label>
+                    <Label :text="L('passphrase')" class="setting-label"></Label>
                     <GridLayout columns="*, auto" verticalAlignment="center">
-                        <TextField col="0" v-model="passphrase" :secure="!showPassphrase" hint="Enter passphrase" class="setting-input" style="margin-bottom: 0;"></TextField>
-                        <Button col="1" :text="showPassphrase ? 'Hide' : 'Show'" @tap="togglePassphraseVisibility" class="btn btn-secondary toggle-button"></Button>
+                        <TextField col="0" v-model="passphrase" :secure="!showPassphrase" :hint="L('enter_passphrase')" class="setting-input" style="margin-bottom: 0;"></TextField>
+                        <Button col="1" :text="showPassphrase ? L('hide') : L('show')" @tap="togglePassphraseVisibility" class="btn btn-secondary toggle-button"></Button>
                     </GridLayout>
 
-                    <Label text="Backup and Restore" class="setting-label"></Label>
-                    <StackLayout>
-                        <Button text="Backup" @tap="backup" class="btn btn-secondary backup-button"></Button>
+                    <Label :text="L('wifi_connectivity')" class="setting-label"></Label>
+                    <Button :text="L('set_wifi_password')" @tap="setWifiPassword" class="btn btn-secondary"></Button>
 
-                        <Label text="Recent Backups" class="setting-label" v-if="backups.length > 0"></Label>
+                    <Label :text="L('backup_and_restore')" class="setting-label"></Label>
+                    <StackLayout>
+                        <Button :text="L('backup')" @tap="backup" class="btn btn-secondary backup-button"></Button>
+                        
+                        <Label :text="L('recent_backups')" class="setting-label" v-if="backups.length > 0"></Label>
                         <ListView :items="backups" class="backup-list">
                             <template v-slot:default="{ item }">
                                 <StackLayout class="backup-item" @tap="selectBackup(item)">
-                                    <Label :text="`Backup from ${formatBackupDate(item.date)}`" />
+                                    <Label :text="`${L('backup_from')} ${formatBackupDate(item.date)}`" />
                                 </StackLayout>
                             </template>
                         </ListView>
@@ -38,7 +41,7 @@
                         <Button :text="backupButtonText" @tap="restore" class="btn btn-secondary"></Button>
                         <TextView
                             v-model="restoreData"
-                            hint="Paste backup data here for restore..."
+                            :hint="L('paste_backup_data')"
                             class="setting-input"
                             :height="isRestoreDataFocused || restoreData.length > 0 ? 120 : 50"
                             @focus="isRestoreDataFocused = true"
@@ -46,11 +49,8 @@
                         ></TextView>
                     </StackLayout>
 
-                    <Label text="WiFi Connectivity" class="setting-label"></Label>
-                    <Button text="Set WiFi Password" @tap="setWifiPassword" class="btn btn-secondary"></Button>
-
-                    <Label text="Danger Zone" class="setting-label danger-zone-label"></Label>
-                    <Button text="Factory Reset" @tap="factoryReset" class="btn btn-danger"></Button>
+                    <Label :text="L('danger_zone')" class="setting-label danger-zone-label"></Label>
+                    <Button :text="L('factory_reset')" @tap="factoryReset" class="btn btn-danger"></Button>
                 </StackLayout>
             </ScrollView>
             <GridLayout row="0" col="0" v-if="isBusy" class="overlay" rows="*, auto, *" columns="*" height="100%">
@@ -71,6 +71,8 @@ import { deviceAPI } from '../services/device-api';
 import { PASSPHRASE_KEY, SETTING_DEVICE_NAME } from '../services/settings';
 import * as Clipboard from 'nativescript-clipboard';
 import { passwordStore } from '../services/store';
+import { localize as L } from '@nativescript/localize';
+
 
 const BACKUPS_KEY = 'password_backups';
 
@@ -88,7 +90,7 @@ const selectedBackup = ref(null);
 const originalPassphrase = ref(''); // To track if passphrase changed
 
 const backupButtonText = computed(() => {
-    return selectedBackup.value !== null ? `Restore from this backup` : 'Restore';
+    return selectedBackup.value !== null ? L('restore_from_this_backup') : L('restore');
 });
 
 // Application Settings Keys
@@ -174,19 +176,19 @@ const formatBackupDate = (dateString) => {
     if (diffMonths < 3) {
         let relativeDate;
         if (diffDays === 0) {
-            relativeDate = 'Today';
+            relativeDate = L('today');
         } else if (diffDays === 1) {
-            relativeDate = 'Yesterday';
+            relativeDate = L('yesterday');
         } else if (diffDays < 7) {
-            relativeDate = `${diffDays} days ago`;
+            relativeDate = `${diffDays} ${L('days_ago')}`;
         } else if (diffDays < 30) {
             const weeks = Math.floor(diffDays / 7);
-            relativeDate = weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+            relativeDate = weeks === 1 ? L('a_week_ago') : `${weeks} ${L('weeks_ago')}`;
         } else {
             const months = Math.floor(diffDays / 30);
-            relativeDate = months <= 1 ? '1 month ago' : `${months} months ago`;
+            relativeDate = months <= 1 ? L('a_month_ago') : `${months} ${L('months_ago')}`;
         }
-        return `${relativeDate} at ${time}`;
+        return `${relativeDate} ${L('at')} ${time}`;
     } else {
         // For older dates, show full local date and time in a consistent format
         return date.toLocaleString([], {

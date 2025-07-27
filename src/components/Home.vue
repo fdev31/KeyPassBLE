@@ -9,14 +9,14 @@
             <!-- Disconnected Mode -->
             <template v-if="currentMode === 'disconnected' || currentMode === 'connecting'">
                 <GridLayout row="0" columns="*,*" class="button-grid">
-                    <Button col="0" text="Scan" @tap="startScan" :isEnabled="!isScanning" class="btn btn-primary"></Button>
-                    <Button col="1" text="Paired Devices" @tap="listPairedDevices" :isEnabled="!isScanning" class="btn btn-secondary"></Button>
+                    <Button col="0" :text="L('scan')" @tap="startScan" :isEnabled="!isScanning" class="btn btn-primary"></Button>
+                    <Button col="1" :text="L('paired_devices')" @tap="listPairedDevices" :isEnabled="!isScanning" class="btn btn-secondary"></Button>
                 </GridLayout>
 
                 <ScrollView row="1" class="list-container">
                     <StackLayout>
                         <StackLayout v-for="device in discoveredDevices" :key="device.UUID" @tap="connectToDevice(device)" class="list-item">
-                            <Label :text="device.name || 'Unknown Device'" class="list-item-name"></Label>
+                            <Label :text="device.name || L('unknown_device')" class="list-item-name"></Label>
                             <Label :text="device.UUID" class="list-item-uuid"></Label>
                         </StackLayout>
                     </StackLayout>
@@ -35,7 +35,7 @@
                         <StackLayout v-for="entry in passwordStore.entries" :key="entry.uid" @tap="onPasswordSelected(entry)" @longPress="onEditPassword(entry)" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
                             <Label :text="entry.name" class="list-item-name"></Label>
                         </StackLayout>
-                        <Label v-if="passwordStore.entries.length === 0" text="No passwords found." class="status-label"></Label>
+                        <Label v-if="passwordStore.entries.length === 0" :text="L('no_passwords_found')" class="status-label"></Label>
                     </StackLayout>
                 </ScrollView>
 
@@ -64,6 +64,7 @@ import Settings from './Settings.vue';
 import PassEditPage from './PassEditPage.vue';
 import AdvancedOptions from './AdvancedOptions.vue';
 import { passwordStore, appStore } from '../services/store';
+import { localize as L } from '@nativescript/localize';
 
 interface PasswordEntry {
     uid: string;
@@ -72,7 +73,7 @@ interface PasswordEntry {
 
 const isScanning = ref(false);
 const discoveredDevices = ref<Partial<Peripheral>[]>([]);
-const statusMessage = ref('App started. Loading...');
+const statusMessage = ref(L('app_started_loading'));
 const currentMode = ref<'disconnected' | 'connecting' | 'list'>('disconnected');
 const selectedPasswordEntry = ref<PasswordEntry | null>(null);
 const startupLogicHasRun = ref(false);
@@ -98,11 +99,11 @@ const actionBarTitle = computed(() => {
     switch (currentMode.value) {
         case 'disconnected':
         case 'connecting':
-            return 'KeyPass Connector';
+            return L('keypass_connector');
         case 'list':
-            return 'Your Passwords';
+            return L('your_passwords');
         default:
-            return 'KeyPass';
+            return L('keypass');
     }
 });
 
@@ -170,16 +171,16 @@ const handleConnectionStateChange = (newState: ConnectionState) => {
     switch (newState) {
         case ConnectionState.DISCONNECTED:
             currentMode.value = 'disconnected';
-            statusMessage.value = 'Disconnected. Please select a device.';
+            statusMessage.value = L('disconnected_select_device');
             discoveredDevices.value = [];
             selectedPasswordEntry.value = null;
             break;
         case ConnectionState.CONNECTING:
             currentMode.value = 'connecting';
-            statusMessage.value = 'Connecting...';
+            statusMessage.value = L('connecting');
             break;
         case ConnectionState.CONNECTED:
-            statusMessage.value = `Connected to ${connectionManager.connectedPeripheral?.name}!`;
+            statusMessage.value = `${L('connected_to')} ${connectionManager.connectedPeripheral?.name}!`;
             authenticateAndLoadList();
             break;
     }
@@ -190,10 +191,10 @@ const authenticateAndLoadList = async () => {
         let passphrase = ApplicationSettings.getString(PASSPHRASE_KEY);
         if (!passphrase) {
             const result = await Dialogs.prompt({
-                title: "Enter Passphrase",
-                message: "Please enter the passphrase for your device.",
-                okButtonText: "Save",
-                cancelButtonText: "Cancel",
+                title: L('enter_passphrase_title'),
+                message: L('enter_passphrase_message'),
+                okButtonText: L('save'),
+                cancelButtonText: L('cancel'),
                 inputType: "password"
             });
 
@@ -210,12 +211,12 @@ const authenticateAndLoadList = async () => {
         statusMessage.value = authResponse.m;
         currentMode.value = 'list';
         setTimeout(() => {
-            statusMessage.value = 'Loading password list...';
+            statusMessage.value = L('loading_password_list');
             loadPasswordList(true);
         }, 600);
     } catch (authErr) {
         console.error(`Authentication failed: ${authErr}`);
-        statusMessage.value = `Authentication failed: ${authErr.message}`;
+        statusMessage.value = `${L('authentication_failed')} ${authErr.message}`;
         connectionManager.disconnect();
     } finally {
         appStore.isInitialLoadComplete.value = true;
@@ -237,36 +238,36 @@ watch(selectedLayout, (newValue) => {
 
 const loadPasswordList = async (forced) => {
     if (!forced && passwordStore.entries.length > 0) {
-        statusMessage.value = `Using cached passwords (${passwordStore.entries.length} entries).`;
+        statusMessage.value = L('using_cached_passwords', passwordStore.entries.length);
         return; // Use cached passwords if available
     }
-    statusMessage.value = 'Loading passwords...';
+    statusMessage.value = L('loading_passwords');
     try {
         const response = await deviceAPI.list();
         const parsedResponse = response;
         const parsedList: PasswordEntry[] = parsedResponse.passwords;
         passwordStore.entriesRef.value = parsedList;
         ApplicationSettings.setString('cachedPasswords', JSON.stringify(parsedList));
-        statusMessage.value = `Loaded ${parsedList.length} passwords.`;
+        statusMessage.value = L('loaded_passwords', parsedList.length);
     } catch (err) {
         console.error(`Failed to load password list: ${err}`);
-        statusMessage.value = `Failed to load passwords: ${err.message}`;
+        statusMessage.value = `${L('failed_to_load_passwords')} ${err.message}`;
     }
 };
 
 const onPasswordSelected = async (entry: PasswordEntry) => {
     selectedPasswordEntry.value = entry;
-    statusMessage.value = `Selected password: ${entry.name} (UID: ${entry.uid}). Typing...`;
+    statusMessage.value = L('selected_password_typing', entry.name, entry.uid);
     await typeSelectedPassword();
 };
 
 const typeSelectedPassword = async () => {
     if (!selectedPasswordEntry.value) {
-        alert("No password selected.");
+        alert(L('no_password_selected'));
         return;
     }
 
-    statusMessage.value = `Typing password: ${selectedPasswordEntry.value.name}...`;
+    statusMessage.value = L('typing_password', selectedPasswordEntry.value.name);
     try {
         const layoutToUse = useLayoutOverride.value ? selectedLayout.value : undefined;
         const response = await deviceAPI.typePass(
@@ -277,7 +278,7 @@ const typeSelectedPassword = async () => {
         statusMessage.value = response.m;
     } catch (err) {
         console.error(`Failed to type password: ${err}`);
-        statusMessage.value = `Failed to type password: ${err.message}`;
+        statusMessage.value = `${L('failed_to_type_password')} ${err.message}`;
     }
 };
 
@@ -291,21 +292,21 @@ const listPairedDevices = async () => {
         if (devices.length > 0) {
             discoveredDevices.value.length = 0;
             devices.forEach(d => discoveredDevices.value.push(d));
-            statusMessage.value = `Found ${devices.length} paired devices. Tap one to connect.`;
+            statusMessage.value = L('found_paired_devices', devices.length);
         } else {
-            statusMessage.value = 'No paired devices found.';
+            statusMessage.value = L('no_paired_devices_found');
             discoveredDevices.value = [];
         }
     } catch (err) {
         console.error('Error listing paired devices:', err);
-        alert('Error listing paired devices: ' + err.message);
+        alert(`${L('error_listing_paired_devices')} ${err.message}`);
     }
 };
 
 const startScan = async () => {
     isScanning.value = true;
     discoveredDevices.value = [];
-    statusMessage.value = 'Scanning for devices...';
+    statusMessage.value = L('scanning_for_devices');
     try {
         await connectionManager.startScan((peripheral) => {
             const existing = discoveredDevices.value.find(d => d.UUID === peripheral.UUID);
@@ -313,10 +314,10 @@ const startScan = async () => {
                 discoveredDevices.value.push(peripheral);
             }
         });
-        statusMessage.value = `Scan complete. Found ${discoveredDevices.value.length} devices.`;
+        statusMessage.value = L('scan_complete_found_devices', discoveredDevices.value.length);
     } catch (err) {
         console.error(`Error during scan: ${err}`);
-        statusMessage.value = `Scan failed: ${err.message}`;
+        statusMessage.value = `${L('scan_failed')} ${err.message}`;
     } finally {
         isScanning.value = false;
     }
