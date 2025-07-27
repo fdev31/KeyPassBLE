@@ -17,6 +17,7 @@
                     </GridLayout>
 
                     <Button text="Save Settings" @tap="saveSettings" class="btn btn-primary save-button"></Button>
+                    <Button text="Set WiFi Password" @tap="setWifiPassword" class="btn btn-secondary wifi-button"></Button>
 
                     <Label text="Backup and Restore" class="setting-label"></Label>
                     <StackLayout>
@@ -41,6 +42,9 @@
                             @blur="isRestoreDataFocused = false"
                         ></TextView>
                     </StackLayout>
+
+                    <Label text="Danger Zone" class="setting-label danger-zone-label"></Label>
+                    <Button text="Factory Reset" @tap="factoryReset" class="btn btn-danger"></Button>
                 </StackLayout>
             </ScrollView>
             <GridLayout row="0" col="0" v-if="isBusy" class="overlay" rows="*, auto, *" columns="*" height="100%">
@@ -56,7 +60,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'nativescript-vue';
-import { ApplicationSettings } from '@nativescript/core';
+import { ApplicationSettings, Dialogs } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
 import { PASSPHRASE_KEY, SETTING_DEVICE_NAME } from '../services/settings';
 import * as Clipboard from 'nativescript-clipboard';
@@ -175,6 +179,30 @@ const saveSettings = async () => {
     }
 };
 
+const setWifiPassword = async () => {
+    const result = await Dialogs.prompt({
+        title: "Set WiFi Password",
+        message: "Enter the new WiFi password:",
+        okButtonText: "Set",
+        cancelButtonText: "Cancel",
+        inputType: "password",
+    });
+
+    if (result.result && result.text) {
+        isBusy.value = true;
+        progressTitle.value = 'Updating WiFi Password...';
+        try {
+            await deviceAPI.updateWifiPass(result.text);
+            alert('WiFi password updated successfully!');
+        } catch (error) {
+            console.error("Failed to update WiFi password:", error);
+            alert(`Failed to update WiFi password: ${error.message || error}`);
+        } finally {
+            isBusy.value = false;
+        }
+    }
+};
+
 const backup = async () => {
     isBusy.value = true;
     progress.value = 0;
@@ -257,6 +285,32 @@ const restore = async () => {
         isBusy.value = false;
     }
 };
+
+const factoryReset = async () => {
+    const result = await Dialogs.confirm({
+        title: "Confirm Factory Reset",
+        message: "Are you sure you want to factory reset the device? This will erase all data.",
+        okButtonText: "Yes, Reset",
+        cancelButtonText: "Cancel",
+    });
+
+    if (result) {
+        isBusy.value = true;
+        progressTitle.value = 'Factory Resetting...';
+        progress.value = 0; // or some indeterminate state if possible
+        try {
+            await deviceAPI.reset();
+            progress.value = 100;
+            alert('Factory reset successful!');
+            // Optionally, navigate away or clear settings
+        } catch (error) {
+            console.error("Factory reset failed:", error);
+            alert(`Factory reset failed: ${error.message || error}`);
+        } finally {
+            isBusy.value = false;
+        }
+    }
+};
 </script>
 
 <style scoped>
@@ -329,6 +383,20 @@ const restore = async () => {
 
 .save-button {
     margin-top: 24;
+}
+
+.wifi-button {
+    margin-top: 8;
+}
+
+.danger-zone-label {
+    color: #DC2626; /* Red-600 */
+}
+
+.btn-danger {
+    background-color: #DC2626; /* Red-600 */
+    color: white;
+    margin-top: 8;
 }
 
 .overlay {
