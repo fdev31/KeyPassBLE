@@ -21,7 +21,17 @@
                     <Label text="Backup and Restore" class="setting-label"></Label>
                     <StackLayout>
                         <Button text="Backup" @tap="backup" class="btn btn-secondary backup-button"></Button>
-                        <Button text="Restore" @tap="restore" class="btn btn-secondary"></Button>
+                        
+                        <Label text="Recent Backups" class="setting-label" v-if="backups.length > 0"></Label>
+                        <ListView :items="backups" class="backup-list">
+                            <template v-slot:default="{ item }">
+                                <StackLayout class="backup-item" @tap="selectBackup(item)">
+                                    <Label :text="`Backup from ${new Date(item.date).toLocaleString()}`" />
+                                </StackLayout>
+                            </template>
+                        </ListView>
+
+                        <Button :text="backupButtonText" @tap="restore" class="btn btn-secondary"></Button>
                         <TextView
                             v-model="restoreData"
                             hint="Paste backup data here for restore..."
@@ -45,13 +55,14 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'nativescript-vue';
+import { ref, onMounted, computed } from 'nativescript-vue';
 import { ApplicationSettings } from '@nativescript/core';
 import { deviceAPI } from '../services/device-api';
 import { PASSPHRASE_KEY, SETTING_DEVICE_NAME } from '../services/settings';
 import * as Clipboard from 'nativescript-clipboard';
 import { passwordStore } from '../services/store';
 
+const BACKUPS_KEY = 'password_backups';
 
 const deviceName = ref('');
 const passphrase = ref('');
@@ -61,8 +72,14 @@ const isRestoreDataFocused = ref(false);
 const isBusy = ref(false);
 const progress = ref(0);
 const progressTitle = ref('');
+const backups = ref([]);
+const selectedBackup = ref(null);
 
 const originalPassphrase = ref(''); // To track if passphrase changed
+
+const backupButtonText = computed(() => {
+    return selectedBackup.value !== null ? `Restore from this backup` : 'Restore';
+});
 
 // Application Settings Keys
 
@@ -71,7 +88,66 @@ onMounted(() => {
     deviceName.value = ApplicationSettings.getString(SETTING_DEVICE_NAME, 'KeyPass');
     passphrase.value = ApplicationSettings.getString(PASSPHRASE_KEY, '');
     originalPassphrase.value = passphrase.value; // Store original passphrase
+    loadBackups();
 });
+
+const loadBackups = () => {
+    const storedBackups = ApplicationSettings.getString(BACKUPS_KEY);
+    console.log('Attempting to load backups from ApplicationSettings...');
+    if (storedBackups) {
+        console.log('Found stored backups:', storedBackups);
+        try {
+            const parsedBackups = JSON.parse(storedBackups);
+            if (Array.isArray(parsedBackups)) {
+                backups.value = parsedBackups;
+                console.log('Successfully parsed and loaded backups:', backups.value);
+            } else {
+                console.error('Parsed backups are not an array:', parsedBackups);
+                backups.value = [];
+            }
+        } catch (error) {
+            console.error('Error parsing backups from ApplicationSettings:', error);
+            backups.value = [];
+        }
+    } else {
+        console.log('No backups found in ApplicationSettings.');
+        backups.value = [];
+    }
+};
+
+const saveBackups = () => {
+    try {
+        const stringifiedBackups = JSON.stringify(backups.value);
+        ApplicationSettings.setString(BACKUPS_KEY, stringifiedBackups);
+        console.log('Successfully saved backups:', stringifiedBackups);
+    } catch (error) {
+        console.error('Error saving backups to ApplicationSettings:', error);
+    }
+};
+
+const addBackup = (dumpData) => {
+    const newBackup = {
+        date: new Date().toISOString(),
+        data: dumpData,
+    };
+    backups.value.unshift(newBackup);
+    if (backups.value.length > 3) {
+        backups.value.pop();
+    }
+    saveBackups();
+};
+
+const selectBackup = (backup) => {
+    console.log('Backup item selected:', JSON.stringify(backup));
+    if (backup && typeof backup.data !== 'undefined') {
+        selectedBackup.value = backup;
+        restoreData.value = backup.data;
+        console.log('restoreData has been set.');
+    } else {
+        console.error('Selected backup item is invalid or has no data:', backup);
+        restoreData.value = ''; // Set to empty string to avoid crash
+    }
+};
 
 const togglePassphraseVisibility = () => {
     showPassphrase.value = !showPassphrase.value;
@@ -127,6 +203,7 @@ const backup = async () => {
             index++;
         }
         const dumpData = fullDump.join('\n');
+        addBackup(dumpData);
         await Clipboard.setText(dumpData);
         alert(`${index} passwords dumped and copied to clipboard!`);
     } catch (error) {
@@ -189,6 +266,20 @@ const restore = async () => {
 
 .backup-button {
     margin-bottom: 8;
+}
+
+.backup-list {
+    height: 180;
+    margin-bottom: 8;
+    border-width: 1;
+    border-color: #E5E7EB;
+    border-radius: 8;
+}
+
+.backup-item {
+    padding: 12;
+    border-bottom-width: 1;
+    border-bottom-color: #E5E7EB;
 }
 
 .action-bar {
