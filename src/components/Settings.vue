@@ -30,7 +30,7 @@
                         <ListView :items="backups" class="backup-list">
                             <template v-slot:default="{ item }">
                                 <StackLayout class="backup-item" @tap="selectBackup(item)">
-                                    <Label :text="`Backup from ${new Date(item.date).toLocaleString()}`" />
+                                    <Label :text="`Backup from ${formatBackupDate(item.date)}`" />
                                 </StackLayout>
                             </template>
                         </ListView>
@@ -156,6 +156,47 @@ const selectBackup = (backup) => {
     } else {
         console.error('Selected backup item is invalid or has no data:', backup);
         restoreData.value = ''; // Set to empty string to avoid crash
+    }
+};
+
+const formatBackupDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const diffMonths = now.getMonth() - date.getMonth() + (12 * (now.getFullYear() - date.getFullYear()));
+
+    // Manually format time to HH:MM to avoid timezone strings
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const time = `${hours}:${minutes}`;
+
+    if (diffMonths < 3) {
+        let relativeDate;
+        if (diffDays === 0) {
+            relativeDate = 'Today';
+        } else if (diffDays === 1) {
+            relativeDate = 'Yesterday';
+        } else if (diffDays < 7) {
+            relativeDate = `${diffDays} days ago`;
+        } else if (diffDays < 30) {
+            const weeks = Math.floor(diffDays / 7);
+            relativeDate = weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+        } else {
+            const months = Math.floor(diffDays / 30);
+            relativeDate = months <= 1 ? '1 month ago' : `${months} months ago`;
+        }
+        return `${relativeDate} at ${time}`;
+    } else {
+        // For older dates, show full local date and time in a consistent format
+        return date.toLocaleString([], {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
     }
 };
 
