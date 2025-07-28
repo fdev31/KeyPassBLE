@@ -80,6 +80,10 @@ export class BLEBackend {
         });
     }
 
+    stopScan(): Promise<void> {
+        return this.bluetooth.stopScanning();
+    }
+
     async listPairedDevices(): Promise<Peripheral[]> {
         if (!isAndroid) {
             return [];

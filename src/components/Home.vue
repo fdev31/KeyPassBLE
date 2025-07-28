@@ -9,7 +9,7 @@
             <!-- Disconnected Mode -->
             <template v-if="currentMode === 'disconnected' || currentMode === 'connecting'">
                 <GridLayout row="0" columns="*,*" class="button-grid">
-                    <Button col="0" :text="L('scan')" @tap="startScan" :isEnabled="!isScanning" class="btn btn-primary"></Button>
+                    <Button col="0" :text="isScanning ? L('stop_scan') : L('scan')" @tap="toggleScan" class="btn btn-primary"></Button>
                     <Button col="1" :text="L('paired_devices')" @tap="listPairedDevices" :isEnabled="!isScanning" class="btn btn-secondary"></Button>
                 </GridLayout>
 
@@ -74,8 +74,8 @@ interface PasswordEntry {
     name: string;
 }
 
-const isScanning = ref(false);
-const discoveredDevices = ref<Partial<Peripheral>[]>([]);
+const isScanning = ref(connectionManager.isScanning);
+const discoveredDevices = ref<Peripheral[]>(connectionManager.discoveredPeripherals);
 const statusMessage = ref(L('app_started_loading'));
 const currentMode = ref<'disconnected' | 'connecting' | 'list'>('disconnected');
 const selectedPasswordEntry = ref<PasswordEntry | null>(null);
@@ -158,6 +158,11 @@ onMounted(() => {
     connectionManager.on('propertyChange', (args) => {
         if (args.propertyName === 'state') {
             handleConnectionStateChange(args.value);
+        } else if (args.propertyName === 'isScanning') {
+            isScanning.value = args.value;
+            statusMessage.value = args.value ? L('scanning_for_devices') : L('scan_stopped');
+        } else if (args.propertyName === 'discoveredPeripherals') {
+            discoveredDevices.value = args.value;
         }
     });
     runStartupLogic();
@@ -175,7 +180,6 @@ const handleConnectionStateChange = (newState: ConnectionState) => {
         case ConnectionState.DISCONNECTED:
             currentMode.value = 'disconnected';
             statusMessage.value = L('disconnected_select_device');
-            discoveredDevices.value = [];
             selectedPasswordEntry.value = null;
             break;
         case ConnectionState.CONNECTING:
@@ -306,23 +310,11 @@ const listPairedDevices = async () => {
     }
 };
 
-const startScan = async () => {
-    isScanning.value = true;
-    discoveredDevices.value = [];
-    statusMessage.value = L('scanning_for_devices');
-    try {
-        await connectionManager.startScan((peripheral) => {
-            const existing = discoveredDevices.value.find(d => d.UUID === peripheral.UUID);
-            if (!existing) {
-                discoveredDevices.value.push(peripheral);
-            }
-        });
-        statusMessage.value = L('scan_complete_found_devices', discoveredDevices.value.length);
-    } catch (err) {
-        console.error(`Error during scan: ${err}`);
-        statusMessage.value = `${L('scan_failed')} ${err.message}`;
-    } finally {
-        isScanning.value = false;
+const toggleScan = async () => {
+    if (isScanning.value) {
+        await connectionManager.stopScan();
+    } else {
+        await connectionManager.startScan();
     }
 };
 

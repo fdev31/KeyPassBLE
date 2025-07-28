@@ -18,6 +18,8 @@
   <string name="name">"Name"</string>
   <string name="add_new_password">"Add New Password"</string>
   <string name="edit_password">"Edit Password"</string>
+  <string name="scan_stopped">"Scan stopped."</string>
+  <string name="stop_scan">"Stop Scan"</string>
   <string name="scan_failed">"Scan failed:"</string>
   <string name="scan_complete_found_devices">"Scan complete. Found %1$d devices."</string>
   <string name="scanning_for_devices">"Scanning for devices..."</string>

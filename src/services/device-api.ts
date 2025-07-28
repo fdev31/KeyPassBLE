@@ -35,6 +35,10 @@ class DeviceAPI {
         return this.backend.startScan(onDeviceDiscovered);
     }
 
+    public stopScan(): Promise<void> {
+        return this.backend.stopScan();
+    }
+
     public async listPairedDevices(): Promise<Peripheral[]> {
         return this.backend.listPairedDevices();
     }

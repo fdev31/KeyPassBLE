@@ -15,6 +15,8 @@ class ConnectionManager extends Observable {
     private _lastConnectedDeviceUUID: string | null = ApplicationSettings.getString(LAST_DEVICE_KEY) || null;
     private isConnecting = false;
     private reconnectTimer: any = null;
+    private _isScanning = false;
+    public discoveredPeripherals: Peripheral[] = [];
 
     constructor() {
         super();
@@ -39,6 +41,17 @@ class ConnectionManager extends Observable {
         }
     }
 
+    get isScanning(): boolean {
+        return this._isScanning;
+    }
+
+    private setScanning(isScanning: boolean) {
+        if (this._isScanning !== isScanning) {
+            this._isScanning = isScanning;
+            this.notifyPropertyChange('isScanning', isScanning);
+        }
+    }
+
     get connectedPeripheral(): Peripheral | null {
         return this._connectedPeripheral;
     }
@@ -48,19 +61,38 @@ class ConnectionManager extends Observable {
         this.notifyPropertyChange('connectedPeripheral', peripheral);
     }
 
-    async startScan(onDeviceDiscovered: (p: Peripheral) => void): Promise<void> {
+    async startScan(): Promise<void> {
         if (this.state !== ConnectionState.DISCONNECTED) {
             return;
         }
         // Stop the reconnect timer when a manual scan is initiated
         this.stopReconnectTimer();
-        return deviceAPI.startScan(onDeviceDiscovered);
+        this.setScanning(true);
+        this.discoveredPeripherals = [];
+        this.notifyPropertyChange('discoveredPeripherals', []);
+
+        return deviceAPI.startScan((p: Peripheral) => {
+            const existingPeripheral = this.discoveredPeripherals.find(
+                (existing) => existing.UUID === p.UUID
+            );
+            if (!existingPeripheral) {
+                this.discoveredPeripherals.push(p);
+                this.notifyPropertyChange('discoveredPeripherals', this.discoveredPeripherals);
+            }
+        });
+    }
+
+    async stopScan(): Promise<void> {
+        await deviceAPI.stopScan();
+        this.setScanning(false);
+        this.startReconnectTimer();
     }
 
     async connect(peripheral: Peripheral): Promise<void> {
         if (
             (this.state === ConnectionState.CONNECTED && this._connectedPeripheral?.UUID === peripheral.UUID) ||
-            this.isConnecting
+            this.isConnecting ||
+            this.isScanning
         ) {
             return;
         }
@@ -106,15 +138,36 @@ class ConnectionManager extends Observable {
         this.startReconnectTimer();
     }
 
+    private startBackgroundScan() {
+        // Don't start a background scan if already connected or scanning
+        if (this.state !== ConnectionState.DISCONNECTED || this.isScanning) {
+            return;
+        }
+
+        deviceAPI.startScan((p: Peripheral) => {
+            const existingPeripheral = this.discoveredPeripherals.find(
+                (existing) => existing.UUID === p.UUID
+            );
+            if (!existingPeripheral) {
+                this.discoveredPeripherals.push(p);
+                this.notifyPropertyChange('discoveredPeripherals', this.discoveredPeripherals);
+            }
+
+            // If we found the last connected device, try to reconnect
+            if (p.UUID === this._lastConnectedDeviceUUID) {
+                this.connect(p);
+            }
+        });
+    }
+
     private startReconnectTimer() {
-        if (this.reconnectTimer || !this._lastConnectedDeviceUUID) {
+        if (this.reconnectTimer) {
             return;
         }
         console.log('[ConnectionManager] Starting reconnect timer.');
         this.reconnectTimer = setInterval(() => {
             if (this.state === ConnectionState.DISCONNECTED && !this.isConnecting) {
-                console.log('[ConnectionManager] Timer attempting to reconnect...');
-                this.connect({ UUID: this._lastConnectedDeviceUUID } as Peripheral);
+                this.startBackgroundScan();
             }
         }, 2000);
     }
@@ -125,6 +178,8 @@ class ConnectionManager extends Observable {
             clearInterval(this.reconnectTimer);
             this.reconnectTimer = null;
         }
+        // Also stop the background scan
+        deviceAPI.stopScan();
     }
 }
 

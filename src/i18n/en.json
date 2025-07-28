@@ -65,6 +65,8 @@
     "scanning_for_devices": "Scanning for devices...",
     "scan_complete_found_devices": "Scan complete. Found %d devices.",
     "scan_failed": "Scan failed:",
+    "stop_scan": "Stop Scan",
+    "scan_stopped": "Scan stopped.",
     "edit_password": "Edit Password",
     "add_new_password": "Add New Password",
     "name": "Name",

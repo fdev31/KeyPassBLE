@@ -65,6 +65,8 @@
     "scanning_for_devices": "Buscando dispositivos...",
     "scan_complete_found_devices": "Escaneo completo. Se encontraron %d dispositivos.",
     "scan_failed": "Falló el escaneo:",
+    "stop_scan": "Detener Escaneo",
+    "scan_stopped": "Escaneo detenido.",
     "edit_password": "Editar contraseña",
     "add_new_password": "Añadir nueva contraseña",
     "name": "Nombre",
