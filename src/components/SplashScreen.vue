@@ -1,51 +1,74 @@
 <template>
     <GridLayout class="splash-container">
-        <Label :text="L('keypass')" class="splash-text"></Label>
-        <GridLayout class="reflection" ref="reflection"></GridLayout>
+        <Label class="splash-label">
+            <FormattedString>
+                <Span v-for="(char, index) in textChars" :key="index" :text="char" :style="{ color: charColors[index] }" />
+            </FormattedString>
+        </Label>
     </GridLayout>
 </template>
+
 <script lang="ts" setup>
 import { localize as L } from '@nativescript/localize';
-import { onMounted, ref } from 'vue';
-import { CoreTypes, Screen } from '@nativescript/core';
+import { ref, onMounted, onUnmounted } from 'vue';
 
-const reflection = ref();
+const text = L('keypass');
+const textChars = text.split('');
+const charColors = ref(Array(text.length).fill('#F5F5F5'));
+
+const baseColor = '#F5F5F5';
+const peakColor = '#FFFFFF';
+const midColor = '#DDDDDD';
+
+let animationInterval: any = null;
+let shinePosition = -2; // Start off-screen to the left
+
+const animateShine = () => {
+    const newColors = Array(text.length).fill(baseColor);
+    
+    // Position of the main shine
+    if (shinePosition >= 0 && shinePosition < text.length) {
+        newColors[shinePosition] = peakColor;
+    }
+    // Edges of the shine
+    if (shinePosition - 1 >= 0 && shinePosition - 1 < text.length) {
+        newColors[shinePosition - 1] = midColor;
+    }
+    if (shinePosition + 1 >= 0 && shinePosition + 1 < text.length) {
+        newColors[shinePosition + 1] = midColor;
+    }
+    
+    charColors.value = newColors;
+    
+    shinePosition++;
+    
+    // Reset the loop
+    if (shinePosition > text.length + 2) {
+        shinePosition = -2;
+    }
+};
 
 onMounted(() => {
-    if (reflection.value) {
-        const reflectionView = reflection.value.nativeView;
-        const screenWidth = Screen.mainScreen.widthDIPs;
-
-        // Start from left of the screen
-        reflectionView.translateX = -screenWidth;
-
-        reflectionView.animate({
-            translate: { x: screenWidth * 2, y: 0 },
-            duration: 1500,
-            curve: CoreTypes.AnimationCurve.easeInOut,
-        });
-    }
+    console.log('SplashScreen.vue: Component mounted, starting character animation.');
+    animationInterval = setInterval(animateShine, 100);
 });
 
+onUnmounted(() => {
+    console.log('SplashScreen.vue: Component unmounted, stopping character animation.');
+    if (animationInterval) {
+        clearInterval(animationInterval);
+    }
+});
 </script>
 
 <style scoped>
 .splash-container {
     background-color: #333333; /* Dark Grey */
-    overflow: hidden;
 }
-.splash-text {
-    color: #F5F5F5; /* Almost White */
+.splash-label {
     font-size: 48;
     font-weight: bold;
     text-align: center;
     vertical-align: middle;
-}
-.reflection {
-    width: 100;
-    height: 300;
-    background: linear-gradient(to right, transparent, white, transparent);
-    transform: skewX(-20deg);
-    opacity: 0.6;
 }
 </style>
