@@ -162,7 +162,8 @@ onMounted(() => {
             isScanning.value = args.value;
             statusMessage.value = args.value ? L('scanning_for_devices') : L('scan_stopped');
         } else if (args.propertyName === 'discoveredPeripherals') {
-            discoveredDevices.value = args.value;
+            // Create a new array to ensure Vue's reactivity is triggered
+            discoveredDevices.value = [...args.value];
         }
     });
     runStartupLogic();
