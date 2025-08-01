@@ -291,6 +291,9 @@ const typeSelectedPassword = async () => {
 };
 
 const connectToDevice = async (device: Partial<Peripheral>) => {
+    if (isScanning.value) {
+        await connectionManager.stopScan();
+    }
     await connectionManager.connect(device as Peripheral);
 };
 
