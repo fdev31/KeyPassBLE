@@ -51,6 +51,8 @@
 
                     <Label :text="L('danger_zone')" class="setting-label danger-zone-label"></Label>
                     <Button :text="L('factory_reset')" @tap="factoryReset" class="btn btn-danger"></Button>
+
+                    <Label :text="`Version: ${version}`" class="version-label"></Label>
                 </StackLayout>
             </ScrollView>
             <GridLayout row="0" col="0" v-if="isBusy" class="overlay" rows="*, auto, *" columns="*" height="100%">
@@ -73,6 +75,9 @@ import * as Clipboard from 'nativescript-clipboard';
 import { passwordStore } from '../services/store';
 import { localize as L } from '@nativescript/localize';
 import { SecureStorage } from '@heywhy/ns-secure-storage';
+import packageInfo from '../../package.json';
+
+const version = computed(() => packageInfo.version);
 
 const secureStorage = new SecureStorage();
 
@@ -471,5 +476,12 @@ const factoryReset = async () => {
     color: #4B5563;
     text-align: center;
     margin-top: 8;
+}
+
+.version-label {
+    font-size: 12;
+    color: #9CA3AF; /* Gray-400 */
+    text-align: center;
+    margin-top: 16;
 }
 </style>
