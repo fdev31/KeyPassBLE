@@ -318,7 +318,7 @@ const toggleScan = async () => {
     if (isScanning.value) {
         await connectionManager.stopScan();
     } else {
-        await deviceAPI.ensureBluetoothEnabled();
+        await deviceAPI.ensureConnectivity();
         await connectionManager.startScan();
     }
 };

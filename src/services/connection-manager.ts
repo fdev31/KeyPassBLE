@@ -25,7 +25,7 @@ class ConnectionManager extends Observable {
 
     private async init() {
         await deviceAPI.requestPermissions();
-        const bluetoothOk = await deviceAPI.ensureBluetoothEnabled();
+        const bluetoothOk = await deviceAPI.ensureConnectivity();
         if (bluetoothOk) {
             this.startReconnectTimer();
         }
@@ -67,11 +67,11 @@ class ConnectionManager extends Observable {
             return;
         }
 
-        const bluetoothOk = await deviceAPI.ensureBluetoothEnabled();
+        const bluetoothOk = await deviceAPI.ensureConnectivity();
         if (!bluetoothOk) {
             return;
         }
-        
+
         // Stop the reconnect timer when a manual scan is initiated
         this.stopReconnectTimer();
         this.setScanning(true);
@@ -104,7 +104,7 @@ class ConnectionManager extends Observable {
             return;
         }
 
-        const bluetoothOk = await deviceAPI.ensureBluetoothEnabled();
+        const bluetoothOk = await deviceAPI.ensureConnectivity();
         if (!bluetoothOk) {
             return;
         }
@@ -156,7 +156,7 @@ class ConnectionManager extends Observable {
             return;
         }
 
-        const bluetoothOk = await deviceAPI.ensureBluetoothEnabled();
+        const bluetoothOk = await deviceAPI.ensureConnectivity();
         if (!bluetoothOk) {
             return;
         }

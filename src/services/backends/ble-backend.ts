@@ -15,7 +15,7 @@ interface Command {
 }
 
 export class BLEBackend {
-    private bluetooth: Bluetooth;
+    private engine: Bluetooth;
     private peripheral: Peripheral | null = null;
     private responseResolver: ((value: string | PromiseLike<string>) => void) | null = null;
     private responseRejecter: ((reason?: any) => void) | null = null;
@@ -30,6 +30,10 @@ export class BLEBackend {
     private isAwaitingHeader = true;
     private pendingCommandsQueue: Array<() => Promise<string>> = [];
     private isProcessingCommand = false;
+
+    constructor() {
+        this.engine = new Bluetooth();
+    }
 
     private async processCommandQueue(): Promise<void> {
         if (this.isProcessingCommand || this.pendingCommandsQueue.length === 0) {
@@ -50,14 +54,8 @@ export class BLEBackend {
         }
     }
 
-    constructor() {
-        this.bluetooth = new Bluetooth();
-    }
-
-    
-
-    async ensureBluetoothEnabled(): Promise<boolean> {
-        const isEnabled = await this.bluetooth.isBluetoothEnabled();
+    async ensureConnectivity(): Promise<boolean> {
+        const isEnabled = await this.engine.isBluetoothEnabled();
         if (!isEnabled) {
             const userAgreed = await Dialogs.confirm({
                 title: "Bluetooth Disabled",
@@ -69,7 +67,7 @@ export class BLEBackend {
             if (userAgreed) {
                 if (isAndroid) {
                     try {
-                        const enabled = await this.bluetooth.enable();
+                        const enabled = await this.engine.enable();
                         if (!enabled) {
                             const intent = new android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
                             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -115,15 +113,14 @@ export class BLEBackend {
     }
 
     startScan(onDeviceDiscovered: (p: Peripheral) => void): Promise<void> {
-        return this.bluetooth.startScanning({
-
+        return this.engine.startScanning({
             seconds: 4,
             onDiscovered: onDeviceDiscovered
         });
     }
 
     stopScan(): Promise<void> {
-        return this.bluetooth.stopScanning();
+        return this.engine.stopScanning();
     }
 
     async listPairedDevices(): Promise<Peripheral[]> {
@@ -131,7 +128,7 @@ export class BLEBackend {
             return [];
         }
         await this.requestPermissions();
-        const bluetoothOk = await this.ensureBluetoothEnabled();
+        const bluetoothOk = await this.ensureConnectivity();
         if (!bluetoothOk) {
             return Promise.reject("Bluetooth is not enabled.");
         }
@@ -157,7 +154,7 @@ export class BLEBackend {
     }
 
     async connect(peripheral: Peripheral, onConnected: (p: Peripheral) => void, onDisconnected: (p: Peripheral) => void): Promise<void> {
-        await this.bluetooth.connect({
+        await this.engine.connect({
             UUID: peripheral.UUID,
             onConnected: (p) => {
                 this.peripheral = p;
@@ -174,7 +171,7 @@ export class BLEBackend {
 
     disconnect() {
         if (this.peripheral) {
-            this.bluetooth.disconnect({ UUID: this.peripheral.UUID });
+            this.engine.disconnect({ UUID: this.peripheral.UUID });
         }
     }
 
@@ -210,13 +207,13 @@ export class BLEBackend {
 
                     try {
                         const cmdString = JSON.stringify(command);
-                        await this.bluetooth.startNotifying({
+                        await this.engine.startNotifying({
                             peripheralUUID: this.peripheral!.UUID,
                             serviceUUID: NUS_SERVICE_UUID,
                             characteristicUUID: NUS_RX_CHARACTERISTIC_UUID,
                             onNotify: ({ value }) => this.handleNotification(value)
                         });
-                        await this.bluetooth.write({
+                        await this.engine.write({
                             peripheralUUID: this.peripheral!.UUID,
                             serviceUUID: NUS_SERVICE_UUID,
                             characteristicUUID: NUS_TX_CHARACTERISTIC_UUID,
