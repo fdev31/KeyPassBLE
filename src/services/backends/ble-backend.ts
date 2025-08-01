@@ -54,23 +54,50 @@ export class BLEBackend {
         this.bluetooth = new Bluetooth();
     }
 
-    async isBluetoothEnabled(): Promise<boolean> {
-        return this.bluetooth.isBluetoothEnabled();
-    }
+    
 
-    async openBluetoothSettings(): Promise<void> {
-        if (isAndroid) {
-            const intent = new android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
-            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-            Application.android.context.startActivity(intent);
-        } else {
-            // On iOS, we can't open settings directly. We can only guide the user.
-            await Dialogs.alert({
-                title: "Bluetooth Settings",
-                message: "Please go to Settings > Bluetooth to enable it.",
-                okButtonText: "OK"
+    async ensureBluetoothEnabled(): Promise<boolean> {
+        const isEnabled = await this.bluetooth.isBluetoothEnabled();
+        if (!isEnabled) {
+            const userAgreed = await Dialogs.confirm({
+                title: "Bluetooth Disabled",
+                message: "This app requires Bluetooth to function. Would you like to enable it now?",
+                okButtonText: "Enable",
+                cancelButtonText: "Cancel"
             });
+
+            if (userAgreed) {
+                if (isAndroid) {
+                    try {
+                        const enabled = await this.bluetooth.enable();
+                        if (!enabled) {
+                            const intent = new android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
+                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                            Application.android.context.startActivity(intent);
+                            return false;
+                        }
+                        return true;
+                    } catch (error) {
+                        console.error("[BLEBackend] Error enabling Bluetooth:", error);
+                        const intent = new android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
+                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                        Application.android.context.startActivity(intent);
+                        return false;
+                    }
+                } else {
+                    // On iOS, we can't open settings directly. We can only guide the user.
+                    await Dialogs.alert({
+                        title: "Bluetooth Settings",
+                        message: "Please go to Settings > Bluetooth to enable it.",
+                        okButtonText: "OK"
+                    });
+                    return false; // We can't confirm if they enabled it.
+                }
+            } else {
+                return false; // User did not agree to enable Bluetooth.
+            }
         }
+        return true; // Bluetooth was already enabled.
     }
 
     async requestPermissions(): Promise<boolean> {
@@ -104,8 +131,8 @@ export class BLEBackend {
             return [];
         }
         await this.requestPermissions();
-        const isEnabled = await this.isBluetoothEnabled();
-        if (!isEnabled) {
+        const bluetoothOk = await this.ensureBluetoothEnabled();
+        if (!bluetoothOk) {
             return Promise.reject("Bluetooth is not enabled.");
         }
 

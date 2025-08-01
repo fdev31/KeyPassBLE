@@ -318,20 +318,8 @@ const toggleScan = async () => {
     if (isScanning.value) {
         await connectionManager.stopScan();
     } else {
-        const isBluetoothEnabled = await deviceAPI.isBluetoothEnabled();
-        if (!isBluetoothEnabled) {
-            const result = await Dialogs.confirm({
-                title: L('bluetooth_disabled'),
-                message: L('enable_bluetooth_to_scan'),
-                okButtonText: L('open_settings'),
-                cancelButtonText: L('cancel'),
-            });
-            if (result) {
-                await deviceAPI.openBluetoothSettings();
-            }
-        } else {
-            await connectionManager.startScan();
-        }
+        await deviceAPI.ensureBluetoothEnabled();
+        await connectionManager.startScan();
     }
 };
 

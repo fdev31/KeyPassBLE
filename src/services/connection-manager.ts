@@ -25,7 +25,8 @@ class ConnectionManager extends Observable {
 
     private async init() {
         await deviceAPI.requestPermissions();
-        if (await deviceAPI.isBluetoothEnabled()) {
+        const bluetoothOk = await deviceAPI.ensureBluetoothEnabled();
+        if (bluetoothOk) {
             this.startReconnectTimer();
         }
     }
@@ -65,6 +66,12 @@ class ConnectionManager extends Observable {
         if (this.state !== ConnectionState.DISCONNECTED) {
             return;
         }
+
+        const bluetoothOk = await deviceAPI.ensureBluetoothEnabled();
+        if (!bluetoothOk) {
+            return;
+        }
+        
         // Stop the reconnect timer when a manual scan is initiated
         this.stopReconnectTimer();
         this.setScanning(true);
@@ -94,6 +101,11 @@ class ConnectionManager extends Observable {
             this.isConnecting ||
             this.isScanning
         ) {
+            return;
+        }
+
+        const bluetoothOk = await deviceAPI.ensureBluetoothEnabled();
+        if (!bluetoothOk) {
             return;
         }
 
@@ -138,9 +150,14 @@ class ConnectionManager extends Observable {
         this.startReconnectTimer();
     }
 
-    private startBackgroundScan() {
+    private async startBackgroundScan() {
         // Don't start a background scan if already connected or scanning
         if (this.state !== ConnectionState.DISCONNECTED || this.isScanning) {
+            return;
+        }
+
+        const bluetoothOk = await deviceAPI.ensureBluetoothEnabled();
+        if (!bluetoothOk) {
             return;
         }
 
@@ -167,7 +184,9 @@ class ConnectionManager extends Observable {
         console.log('[ConnectionManager] Starting reconnect timer.');
         this.reconnectTimer = setInterval(() => {
             if (this.state === ConnectionState.DISCONNECTED && !this.isConnecting) {
-                this.startBackgroundScan();
+                this.startBackgroundScan().catch(error => {
+                    console.error("[ConnectionManager] Error in background scan:", error);
+                });
             }
         }, 2000);
     }
