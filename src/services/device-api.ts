@@ -1,120 +1,60 @@
 import { Dialogs, ApplicationSettings } from '@nativescript/core';
 import { Peripheral } from '@nativescript-community/ble';
-
 import { PASSPHRASE_KEY } from './settings';
 import { BLEBackend } from './backends/ble-backend';
 
-// In the future, we could have an HTTPBackend as well
-// import { HTTPBackend } from './backends/http-backend';
-
 class DeviceAPI {
-    private backend: BLEBackend; // or BLEBackend | HTTPBackend
+    private backend: BLEBackend;
 
     constructor() {
-        // For now, we are only using BLE
         this.backend = new BLEBackend();
     }
 
-    // --- Backend specific methods ---
-    // These methods are specific to the BLE backend and the UI will
-    // need to check the backend type before calling them.
+    // Backend access
+    getBackend = () => this.backend;
 
-    public getBackend(): BLEBackend { // In future: BLEBackend | HTTPBackend
-        return this.backend;
-    }
+    // Direct delegation (no wrapper methods needed)
+    requestPermissions = () => this.backend.requestPermissions();
+    ensureBluetoothEnabled = () => this.backend.ensureBluetoothEnabled();
+    startScan = (onDeviceDiscovered: (p: Peripheral) => void) => this.backend.startScan(onDeviceDiscovered);
+    stopScan = () => this.backend.stopScan();
+    listPairedDevices = () => this.backend.listPairedDevices();
+    connect = (peripheral: Peripheral, onConnected: (p: Peripheral) => void, onDisconnected: (p: Peripheral) => void) =>
+        this.backend.connect(peripheral, onConnected, onDisconnected);
+    disconnect = () => this.backend.disconnect();
 
-    public async requestPermissions(): Promise<boolean> {
-        return this.backend.requestPermissions();
-    }
-
-    public async ensureBluetoothEnabled(): Promise<boolean> {
-        return this.backend.ensureBluetoothEnabled();
-    }
-
-    public startScan(onDeviceDiscovered: (p: Peripheral) => void): Promise<void> {
-        return this.backend.startScan(onDeviceDiscovered);
-    }
-
-    public stopScan(): Promise<void> {
-        return this.backend.stopScan();
-    }
-
-    public async listPairedDevices(): Promise<Peripheral[]> {
-        return this.backend.listPairedDevices();
-    }
-
-    public async connect(peripheral: Peripheral, onConnected: (p: Peripheral) => void, onDisconnected: (p: Peripheral) => void): Promise<void> {
-        return this.backend.connect(peripheral, onConnected, onDisconnected);
-    }
-
-    public disconnect(): void {
-        return this.backend.disconnect();
-    }
-
-    // --- Authentication ---
+    // Authentication (only method with custom logic)
     async authenticate(): Promise<string> {
         const passphrase = ApplicationSettings.getString(PASSPHRASE_KEY);
         if (!passphrase) {
             return Promise.reject("Passphrase not found.");
         }
-        return this.passphrase(passphrase);
+        return this.backend.sendCommand({ cmd: "passphrase", p: passphrase });
     }
 
+    // Generic command helpers
+    private cmd = (command: string, params: any = {}, timeout?: number, responseType?: "json" | "text" | undefined) =>
+        this.backend.sendCommand({ cmd: command, ...params }, timeout, responseType);
 
-    // --- Generic API Methods ---
-    typeRaw(text: string, layout?: number, ret: boolean = true): Promise<string> {
-        const cmd = { cmd: "typeRaw", text, layout, ret: ret ? "true" : "false" };
-        return this.backend.sendCommand(cmd);
-    }
+    typeRaw = (text: string, layout?: number, ret = true) =>
+        this.cmd("typeRaw", { text, layout, ret: ret ? "true" : "false" });
 
-    typePass(id: number, layout?: number, ret: boolean = true): Promise<string> {
-        const cmd = { cmd: "typePass", id, layout, ret: ret ? "true" : "false" };
-        return this.backend.sendCommand(cmd);
-    }
+    typePass = (id: number, layout?: number, ret = true) =>
+        this.cmd("typePass", { id, layout, ret: ret ? "true" : "false" });
 
-    fetchPass(id: number): Promise<string> {
-        return this.backend.sendCommand({ cmd: "fetchPass", id });
-    }
+    fetchPass = (id: number) => this.cmd("fetchPass", { id });
 
-    editPass(id: number, name?: string, password?: string, layout?: number): Promise<string> {
-        const cmd: { cmd: string; id: number; name?: string; password?: string; layout?: number } = { cmd: "editPass", id };
-        if (name) cmd.name = name;
-        if (password) cmd.password = password;
-        if (layout) cmd.layout = layout;
-        return this.backend.sendCommand(cmd);
-    }
+    editPass = (id: number, name?: string, password?: string, layout?: number) =>
+        this.cmd("editPass", { id, ...(name && { name }), ...(password && { password }), ...(layout && { layout }) });
 
-    list(): Promise<string> {
-        return this.backend.sendCommand({ cmd: "list" });
-    }
-
-    reset(): Promise<string> {
-        return this.backend.sendCommand({ cmd: "reset" });
-    }
-
-    updateWifiPass(newPass: string): Promise<string> {
-        return this.backend.sendCommand({ cmd: "updateWifiPass", newPass });
-    }
-
-    passphrase(p: string): Promise<string> {
-        return this.backend.sendCommand({ cmd: "passphrase", p });
-    }
-
-    dump(): Promise<string> {
-        return this.backend.sendCommand({ cmd: "dump" }, 10000, 'text');
-    }
-
-    dumpOne(uid: Number): Promise<string> {
-        return this.backend.sendCommand({ cmd: "dumpOne", uid }, 10000, 'text');
-    }
-
-    restore(data: string): Promise<string> {
-        return this.backend.sendCommand({ cmd: "restore", data });
-    }
-
-    restoreOne(uid: Number, data: string): Promise<string> {
-        return this.backend.sendCommand({ cmd: "restoreOne", uid, data });
-    }
+    list = () => this.cmd("list");
+    reset = () => this.cmd("reset");
+    updateWifiPass = (newPass: string) => this.cmd("updateWifiPass", { newPass });
+    passphrase = (p: string) => this.cmd("passphrase", { p });
+    dump = () => this.cmd("dump", {}, 10000, 'text');
+    dumpOne = (uid: number) => this.cmd("dumpOne", { uid }, 10000, 'text');
+    restore = (data: string) => this.cmd("restore", { data });
+    restoreOne = (uid: number, data: string) => this.cmd("restoreOne", { uid, data });
 }
 
 export const deviceAPI = new DeviceAPI();
