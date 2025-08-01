@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+  <string name="open_settings">"Open Settings"</string>
+  <string name="enable_bluetooth_to_scan">"Bluetooth is disabled. Please enable it to scan for devices."</string>
+  <string name="bluetooth_disabled">"Bluetooth Disabled"</string>
   <string name="failed_to_save_password">"Failed to save password:"</string>
   <string name="password_saved_successfully">"Password saved successfully!"</string>
   <string name="fill_required_fields">"Please fill in all required fields."</string>

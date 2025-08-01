@@ -1,5 +1,5 @@
 import { Bluetooth, Peripheral } from '@nativescript-community/ble';
-import { ApplicationSettings, isAndroid, Device } from '@nativescript/core';
+import { Application, ApplicationSettings, isAndroid, Device, Dialogs } from '@nativescript/core';
 import { check, request } from '@nativescript-community/perms';
 
 import { LAST_DEVICE_KEY } from '../settings';
@@ -56,6 +56,21 @@ export class BLEBackend {
 
     async isBluetoothEnabled(): Promise<boolean> {
         return this.bluetooth.isBluetoothEnabled();
+    }
+
+    async openBluetoothSettings(): Promise<void> {
+        if (isAndroid) {
+            const intent = new android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            Application.android.context.startActivity(intent);
+        } else {
+            // On iOS, we can't open settings directly. We can only guide the user.
+            await Dialogs.alert({
+                title: "Bluetooth Settings",
+                message: "Please go to Settings > Bluetooth to enable it.",
+                okButtonText: "OK"
+            });
+        }
     }
 
     async requestPermissions(): Promise<boolean> {

@@ -84,5 +84,8 @@
     "failed_to_type_current_password": "Error al escribir la contraseña actual:",
     "fill_required_fields": "Por favor, rellena todos los campos obligatorios.",
     "password_saved_successfully": "¡Contraseña guardada con éxito!",
-    "failed_to_save_password": "Error al guardar la contraseña:"
+    "failed_to_save_password": "Error al guardar la contraseña:",
+    "bluetooth_disabled": "Bluetooth desactivado",
+    "enable_bluetooth_to_scan": "Bluetooth está desactivado. Por favor, actívalo para buscar dispositivos.",
+    "open_settings": "Abrir ajustes"
 }

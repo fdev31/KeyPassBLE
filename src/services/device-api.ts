@@ -31,6 +31,10 @@ class DeviceAPI {
         return this.backend.isBluetoothEnabled();
     }
 
+    public async openBluetoothSettings(): Promise<void> {
+        return this.backend.openBluetoothSettings();
+    }
+
     public startScan(onDeviceDiscovered: (p: Peripheral) => void): Promise<void> {
         return this.backend.startScan(onDeviceDiscovered);
     }

@@ -84,5 +84,8 @@
     "failed_to_type_current_password": "Impossibile digitare la password corrente:",
     "fill_required_fields": "Si prega di compilare tutti i campi obbligatori.",
     "password_saved_successfully": "Password salvata con successo!",
-    "failed_to_save_password": "Impossibile salvare la password:"
+    "failed_to_save_password": "Impossibile salvare la password:",
+    "bluetooth_disabled": "Bluetooth disabilitato",
+    "enable_bluetooth_to_scan": "Il Bluetooth è disabilitato. Abilitalo per cercare i dispositivi.",
+    "open_settings": "Apri impostazioni"
 }

@@ -84,5 +84,8 @@
     "failed_to_type_current_password": "Échec de la saisie du not de passe actuel:",
     "fill_required_fields": "Veuillez remplir tous les champs obligatoires.",
     "password_saved_successfully": "Not de passe enregistré avec succès!",
-    "failed_to_save_password": "Échec de l'enregistrement du not de passe:"
+    "failed_to_save_password": "Échec de l'enregistrement du not de passe:",
+    "bluetooth_disabled": "Bluetooth désactivé",
+    "enable_bluetooth_to_scan": "Le Bluetooth est désactivé. Veuillez l'activer pour rechercher des appareils.",
+    "open_settings": "Ouvrir les paramètres"
 }

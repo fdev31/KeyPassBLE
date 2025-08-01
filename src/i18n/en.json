@@ -84,5 +84,8 @@
     "failed_to_type_current_password": "Failed to type current password:",
     "fill_required_fields": "Please fill in all required fields.",
     "password_saved_successfully": "Password saved successfully!",
-    "failed_to_save_password": "Failed to save password:"
+    "failed_to_save_password": "Failed to save password:",
+    "bluetooth_disabled": "Bluetooth Disabled",
+    "enable_bluetooth_to_scan": "Bluetooth is disabled. Please enable it to scan for devices.",
+    "open_settings": "Open Settings"
 }
