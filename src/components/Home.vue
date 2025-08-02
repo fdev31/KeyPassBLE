@@ -277,7 +277,7 @@ const typeSelectedPassword = async () => {
 
     statusMessage.value = L('typing_password', selectedPasswordEntry.value.name);
     try {
-        const layoutToUse = useLayoutOverride.value ? selectedLayout.value : undefined;
+        const layoutToUse = useLayoutOverride.value ? selectedLayout.value - 1: undefined;
         const response = await deviceAPI.typePass(
             selectedPasswordEntry.value.uid,
             layoutToUse,
