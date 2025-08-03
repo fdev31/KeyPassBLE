@@ -36,7 +36,7 @@
   <string name="failed_to_load_passwords">"Failed to load passwords:"</string>
   <string name="loaded_passwords">"Loaded %1$d passwords."</string>
   <string name="loading_passwords">"Loading passwords..."</string>
-  <string name="using_cached_passwords">"Using cached passwords (%1$d entries)."</string>
+  <string name="using_cached_passwords">"%1$d passwords"</string>
   <string name="authentication_failed">"Authentication failed:"</string>
   <string name="loading_password_list">"Loading password list..."</string>
   <string name="save">"Save"</string>

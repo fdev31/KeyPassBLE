@@ -51,7 +51,7 @@
     "save": "Salva",
     "loading_password_list": "Caricamento elenco password...",
     "authentication_failed": "Autenticazione fallita:",
-    "using_cached_passwords": "Utilizzo delle password memorizzate nella cache (%d voci).",
+    "using_cached_passwords": "%d password memorizzate",
     "loading_passwords": "Caricamento password...",
     "loaded_passwords": "%d password caricate.",
     "failed_to_load_passwords": "Impossible caricare le password:",

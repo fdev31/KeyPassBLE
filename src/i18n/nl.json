@@ -51,7 +51,7 @@
     "save": "Opslaan",
     "loading_password_list": "Wachtwoordenlijst laden...",
     "authentication_failed": "Authenticatie mislukt:",
-    "using_cached_passwords": "Gebruik van gecachte wachtwoorden (%d items).",
+    "using_cached_passwords": "%d wachtwoorden",
     "loading_passwords": "Wachtwoorden laden...",
     "loaded_passwords": "%d wachtwoorden geladen.",
     "failed_to_load_passwords": "Wachtwoorden laden mislukt:",

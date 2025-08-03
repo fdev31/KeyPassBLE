@@ -51,7 +51,7 @@
     "save": "Save",
     "loading_password_list": "Loading password list...",
     "authentication_failed": "Authentication failed:",
-    "using_cached_passwords": "Using cached passwords (%d entries).",
+    "using_cached_passwords": "%d passwords",
     "loading_passwords": "Loading passwords...",
     "loaded_passwords": "Loaded %d passwords.",
     "failed_to_load_passwords": "Failed to load passwords:",

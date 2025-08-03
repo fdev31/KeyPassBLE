@@ -51,7 +51,7 @@
     "save": "Guardar",
     "loading_password_list": "Cargando lista de contraseñas...",
     "authentication_failed": "Falló la autenticación:",
-    "using_cached_passwords": "Usando contraseñas en caché (%d entradas).",
+    "using_cached_passwords": "%d contraseñas",
     "loading_passwords": "Cargando contraseñas...",
     "loaded_passwords": "%d contraseñas cargadas.",
     "failed_to_load_passwords": "Error al cargar las contraseñas:",
