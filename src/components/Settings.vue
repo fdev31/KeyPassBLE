@@ -28,12 +28,12 @@
                     <Label :text="L('backup_and_restore')" class="setting-label"></Label>
                     <StackLayout>
                         <Button :text="L('backup')" @tap="backup" class="btn btn-secondary backup-button"></Button>
-                        
+
                         <Label :text="L('recent_backups')" class="setting-label" v-if="backups.length > 0"></Label>
                         <ListView :items="backups" class="backup-list">
                             <template v-slot:default="{ item }">
                                 <StackLayout class="backup-item" @tap="selectBackup(item)">
-                                    <Label :text="`${L('backup_from')} ${formatBackupDate(item.date)}`" />
+                                    <Label :text="`${L('backup_from')}${formatBackupDate(item.date)}`" />
                                 </StackLayout>
                             </template>
                         </ListView>
@@ -168,6 +168,20 @@ const selectBackup = (backup) => {
     }
 };
 
+/*
+ * Replaces placeholders in a template string with corresponding values from an object
+ * @param str - Template string containing placeholders in format {key}
+ * @param values - Object containing key-value pairs for replacement
+ * @returns The interpolated string with placeholders replaced by values
+ */
+function templateL(str: string, values: Record<string, string | number | boolean>): string {
+  return L(str).replace(/{([^{}]+)}/g, (match: string, key: string): string => {
+    const value = values[key];
+    return value !== undefined ? String(value) : match;
+  });
+}
+
+
 const formatBackupDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -187,13 +201,13 @@ const formatBackupDate = (dateString) => {
         } else if (diffDays === 1) {
             relativeDate = L('yesterday');
         } else if (diffDays < 7) {
-            relativeDate = `${diffDays} ${L('days_ago')}`;
+            relativeDate = templateL('days_ago', {days: diffDays});
         } else if (diffDays < 30) {
             const weeks = Math.floor(diffDays / 7);
-            relativeDate = weeks === 1 ? L('a_week_ago') : `${weeks} ${L('weeks_ago')}`;
+            relativeDate = weeks === 1 ? L('a_week_ago') : templateL('weeks_ago', {weeks});
         } else {
             const months = Math.floor(diffDays / 30);
-            relativeDate = months <= 1 ? L('a_month_ago') : `${months} ${L('months_ago')}`;
+            relativeDate = months <= 1 ? L('a_month_ago') : templateL("months_ago", {months});
         }
         return `${relativeDate} ${L('at')} ${time}`;
     } else {
