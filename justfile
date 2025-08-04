@@ -1,3 +1,11 @@
+# Keystore configuration for Android release builds
+# IMPORTANT: For security, consider loading these from a private .env file
+# by using `set dotenv-load` at the top of this file.
+KEYSTORE_PATH := "keypass.jks"
+KEYSTORE_PASSWORD := "password"
+KEY_ALIAS := "keypass"
+KEY_ALIAS_PASSWORD := "password"
+
 # Default command, runs the app
 default: run
 
@@ -82,3 +90,13 @@ debug-ios:
 # Show logs from the connected iOS device
 log-ios:
     npx nativescript log ios
+
+# Build a signed Android App Bundle for release
+release:
+    npx nativescript build android \
+        --release \
+        --apk \
+        --key-store-path {{KEYSTORE_PATH}} \
+        --key-store-password {{KEYSTORE_PASSWORD}} \
+        --key-store-alias {{KEY_ALIAS}} \
+        --key-store-alias-password {{KEY_ALIAS_PASSWORD}}
