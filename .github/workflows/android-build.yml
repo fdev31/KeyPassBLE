@@ -112,19 +112,9 @@ jobs:
         echo "Attempting build with direct Gradle command:" && \
         cd platforms/android && ./gradlew assembleRelease
 
-    - name: Find APK files
-      if: always()
-      run: |
-        echo "Looking for APK files:"
-        find $GITHUB_WORKSPACE -name "*.apk"
-
     - name: Upload Android Build
       uses: actions/upload-artifact@v4
-      if: always()
       with:
-        name: android-build-artifacts
-        path: |
-          ${{ github.workspace }}/platforms/android/app/build/outputs/apk/release/*.apk
-          ${{ github.workspace }}/**/app/build/outputs/apk/release/*.apk
-          ${{ github.workspace }}/**/*.apk
-        if-no-files-found: warn
+        name: android-release-apk
+        path: platforms/android/app/build/outputs/apk/release/app-release.apk
+        if-no-files-found: error
