@@ -8,19 +8,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    continue-on-error: true
-    strategy:
-      matrix:
-        java-version: [17, 11]
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Java ${{ matrix.java-version }}
+    - name: Setup Java
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '${{ matrix.java-version }}'
+        java-version: '17'
 
     - name: Use Node.js
       uses: actions/setup-node@v4
@@ -38,11 +34,37 @@ jobs:
 
     - name: Configure NativeScript
       run: |
+        # Create NativeScript config directory and files
         mkdir -p $HOME/.local/share/.nativescript-cli/
         echo '{"trackExceptions":false,"trackFeatureUsage":false}' > $HOME/.local/share/.nativescript-cli/user-settings.json
+
+        # Fix the JSON cache file issue
+        echo '{}' > $HOME/.local/share/.nativescript-cli/should-migrate-cache-8.9.3.json
+
+        # Accept Android licenses
         yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+        # Install required Android components
         sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+
+        # Add Android tools to PATH
+        echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+
+        # Verify environment
         ns doctor android
+
+    - name: Prepare NativeScript Project
+      run: |
+        # Ensure we're in the right directory
+        pwd
+        ls -la
+
+        # Clean any previous builds
+        ns clean
+
+        # Prepare the project
+        ns prepare android
 
     - name: Build Android App
       run: ns build android --release --log trace
@@ -50,6 +72,6 @@ jobs:
     - name: Upload Android Build
       uses: actions/upload-artifact@v4
       with:
-        name: android-release-apk-java-${{ matrix.java-version }}
+        name: android-release-apk
         path: platforms/android/app/build/outputs/apk/release/app-release.apk
         if-no-files-found: error
