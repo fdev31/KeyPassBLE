@@ -1,7 +1,7 @@
 import { NativeScriptConfig } from '@nativescript/core';
 
 export default {
-  id: 'org.nativescript.tempnsapp',
+  id: 'site.fdev31.keypass',
   appPath: 'src',
   appResourcesPath: 'App_Resources',
   android: {
