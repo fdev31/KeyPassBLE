@@ -51,66 +51,21 @@ jobs:
         # Set environment variables
         echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        export ANDROID_HOME=$ANDROID_SDK_ROOT
-        export ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT
-        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
+        echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
 
         # Accept licenses
-        echo y | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+        yes | sdkmanager --licenses > /dev/null
 
         # Install required Android SDK components
-        $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
-
-        # Create necessary folders
-        mkdir -p $ANDROID_SDK_ROOT/extras/android/m2repository
-        mkdir -p $ANDROID_SDK_ROOT/extras/google/m2repository
+        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
         # Let NativeScript doctor verify setup
         echo "Verifying environment with NativeScript doctor:"
-        ns doctor android || true
-
-    - name: Create a dummy NativeScript project
-      run: |
-        # Create a minimal NativeScript project
-        cd $GITHUB_WORKSPACE
-
-        # Check if the project already has NativeScript structure
-        if [ ! -d "platforms" ]; then
-          echo "Creating a basic NativeScript project structure"
-          mkdir -p App_Resources/Android
-          mkdir -p platforms/android
-
-          # Create minimal app.js
-          echo "console.log('Hello World');" > app.js
-
-          # Create minimal package.json if it doesn't exist
-          if [ ! -f "package.json" ]; then
-            echo '{
-              "name": "temp-ns-app",
-              "version": "1.0.0",
-              "description": "Temporary NativeScript app",
-              "main": "app.js",
-              "dependencies": {
-                "@nativescript/core": "latest"
-              }
-            }' > package.json
-
-            # Install dependencies
-            npm install
-          fi
-        fi
+        ns doctor android
 
     - name: Build Android App
-      run: |
-        export ANDROID_HOME=$HOME/android-sdk
-        export ANDROID_SDK_ROOT=$HOME/android-sdk
-        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-
-        # Try different build approaches
-        echo "Attempting build with NS build command:"
-        ns build android --release --log trace || \
-        echo "Attempting build with direct Gradle command:" && \
-        cd platforms/android && ./gradlew assembleRelease
+      run: ns build android --release --log trace
 
     - name: Upload Android Build
       uses: actions/upload-artifact@v4

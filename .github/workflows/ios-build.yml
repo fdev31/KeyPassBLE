@@ -40,9 +40,9 @@ jobs:
     #     printf "%s" "$PROVISIONING_PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/build.mobileprovision
 
     - name: Build iOS
-      run: npx nativescript build ios
+      run: npx nativescript build ios --release
     - name: Upload iOS Build
       uses: actions/upload-artifact@v4
       with:
         name: ios-app
-        path: platforms/ios/build/Debug-iphonesimulator/KeyPassBLE.app
+        path: platforms/ios/build/Release-iphonesimulator/KeyPassBLE.app
