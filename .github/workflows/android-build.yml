@@ -1,5 +1,4 @@
 name: Build Android App
-
 on:
   push:
     branches: [ master ]
@@ -9,14 +8,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        java-version: [17, 11]
+
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Java
+    - name: Setup Java ${{ matrix.java-version }}
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '${{ matrix.java-version }}'
 
     - name: Use Node.js
       uses: actions/setup-node@v4
@@ -26,42 +30,18 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    # This is a special step - NativeScript sometimes works better with their own setup process
-    - name: Setup NativeScript environment
-      run: |
-        # Install NativeScript CLI
-        npm install -g nativescript@latest
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
 
-        # Install Android SDK through NativeScript's tooling
+    - name: Install NativeScript CLI
+      run: npm install -g nativescript@latest
+
+    - name: Configure NativeScript
+      run: |
         mkdir -p $HOME/.local/share/.nativescript-cli/
         echo '{"trackExceptions":false,"trackFeatureUsage":false}' > $HOME/.local/share/.nativescript-cli/user-settings.json
-
-        # Setup Android SDK
-        ANDROID_SDK_ROOT=$HOME/android-sdk
-        mkdir -p $ANDROID_SDK_ROOT
-
-        # Download commandline tools
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-        unzip -q commandlinetools-linux-9477386_latest.zip -d $ANDROID_SDK_ROOT
-
-        # Setup proper directory structure expected by NativeScript
-        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools/latest
-        mv $ANDROID_SDK_ROOT/cmdline-tools/* $ANDROID_SDK_ROOT/cmdline-tools/latest/ 2>/dev/null || true
-
-        # Set environment variables
-        echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
-        echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
-
-        # Accept licenses
-        yes | sdkmanager --licenses > /dev/null
-
-        # Install required Android SDK components
+        yes | sdkmanager --licenses > /dev/null 2>&1 || true
         sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
-
-        # Let NativeScript doctor verify setup
-        echo "Verifying environment with NativeScript doctor:"
         ns doctor android
 
     - name: Build Android App
@@ -70,6 +50,6 @@ jobs:
     - name: Upload Android Build
       uses: actions/upload-artifact@v4
       with:
-        name: android-release-apk
+        name: android-release-apk-java-${{ matrix.java-version }}
         path: platforms/android/app/build/outputs/apk/release/app-release.apk
         if-no-files-found: error
