@@ -115,7 +115,10 @@ export class BLEBackend {
     startScan(onDeviceDiscovered: (p: Peripheral) => void): Promise<void> {
         return this.engine.startScanning({
             seconds: 4,
-            onDiscovered: onDeviceDiscovered
+            onDiscovered: onDeviceDiscovered,
+            filters: [
+                { serviceUUID: NUS_SERVICE_UUID }
+            ]
         });
     }
 
