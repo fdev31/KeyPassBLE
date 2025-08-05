@@ -1,7 +1,8 @@
 import { Observable, ApplicationSettings } from '@nativescript/core';
 import { Peripheral } from '@nativescript-community/ble';
 import { deviceAPI } from './device-api';
-import { LAST_DEVICE_KEY } from './settings';
+import { LAST_DEVICE_KEY, PASSPHRASE_KEY } from './settings';
+import { SecureStorage } from '@heywhy/ns-secure-storage';
 
 export enum ConnectionState {
     DISCONNECTED,
@@ -17,9 +18,11 @@ class ConnectionManager extends Observable {
     private reconnectTimer: any = null;
     private _isScanning = false;
     public discoveredPeripherals: Peripheral[] = [];
+    private secureStorage: SecureStorage;
 
     constructor() {
         super();
+        this.secureStorage = new SecureStorage();
         this.init();
     }
 
@@ -64,6 +67,12 @@ class ConnectionManager extends Observable {
 
     async startScan(): Promise<void> {
         if (this.state !== ConnectionState.DISCONNECTED) {
+            return;
+        }
+
+        const permissionsGranted = await deviceAPI.requestPermissions();
+        if (!permissionsGranted) {
+            console.log("[ConnectionManager] Bluetooth permissions not granted. Cannot start scan.");
             return;
         }
 
@@ -135,12 +144,23 @@ class ConnectionManager extends Observable {
         }
     }
 
-    private onConnected(peripheral: Peripheral) {
+    private async onConnected(peripheral: Peripheral) {
         this.stopReconnectTimer();
         this.setConnectedPeripheral(peripheral);
         this.setState(ConnectionState.CONNECTED);
         this._lastConnectedDeviceUUID = peripheral.UUID;
         ApplicationSettings.setString(LAST_DEVICE_KEY, peripheral.UUID);
+        try {
+            const passphrase = (await this.secureStorage.get({ key: PASSPHRASE_KEY }) || '') as string;
+            await deviceAPI.authenticate(passphrase);
+            console.log(`[ConnectionManager] Authenticated with ${peripheral.UUID}.`);
+        } catch (error) {
+            console.error(`[ConnectionManager] Authentication failed for ${peripheral.UUID}: ${error}`);
+            // Optionally, disconnect or show an error to the user if authentication is critical
+            this.disconnect();
+            // Re-throw to propagate the error if needed, or handle it gracefully
+            throw error;
+        }
     }
 
     private onDisconnected(peripheral: Peripheral) {
@@ -153,6 +173,12 @@ class ConnectionManager extends Observable {
     private async startBackgroundScan() {
         // Don't start a background scan if already connected or scanning
         if (this.state !== ConnectionState.DISCONNECTED || this.isScanning) {
+            return;
+        }
+
+        const permissionsGranted = await deviceAPI.requestPermissions();
+        if (!permissionsGranted) {
+            console.log("[ConnectionManager] Bluetooth permissions not granted. Cannot start background scan.");
             return;
         }
 

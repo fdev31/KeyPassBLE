@@ -194,28 +194,33 @@ const handleConnectionStateChange = (newState: ConnectionState) => {
     }
 };
 
-const authenticateAndLoadList = async () => {
-    try {
-        let passphrase = await secureStorage.get({ key: PASSPHRASE_KEY });
-        if (!passphrase) {
-            const result = await Dialogs.prompt({
-                title: L('enter_passphrase_title'),
-                message: L('enter_passphrase_message'),
-                okButtonText: L('save'),
-                cancelButtonText: L('cancel'),
-                inputType: "password"
-            });
+const askPassPhrase = async () : Promise<string> => {
+    let passphrase = await secureStorage.get({ key: PASSPHRASE_KEY }) || '';
+    if (!passphrase) {
+        const result = await Dialogs.prompt({
+            title: L('enter_passphrase_title'),
+            message: L('enter_passphrase_message'),
+            okButtonText: L('save'),
+            cancelButtonText: L('cancel'),
+            inputType: "password"
+        });
 
-            if (result.result && result.text) {
-                passphrase = result.text;
-                await secureStorage.set({ key: PASSPHRASE_KEY, value: passphrase });
-            } else {
-                connectionManager.disconnect();
-                return;
-            }
+        if (result.result && result.text) {
+            passphrase = result.text;
+            await secureStorage.set({ key: PASSPHRASE_KEY, value: passphrase });
+        } else {
+            connectionManager.disconnect();
+            console.error("No text was entered");
+            return;
         }
+    }
+    return passphrase;
+}
 
-        const authResponse = await deviceAPI.authenticate();
+const authenticateAndLoadList = async () => {
+    await askPassPhrase();
+    try {
+        const authResponse = await deviceAPI.authenticate(await askPassPhrase());
         statusMessage.value = authResponse.m;
         currentMode.value = 'list';
         setTimeout(() => {
@@ -294,6 +299,8 @@ const connectToDevice = async (device: Partial<Peripheral>) => {
     if (isScanning.value) {
         await connectionManager.stopScan();
     }
+    await askPassPhrase();
+    console.log("Passphrase is", await secureStorage.get({ key: PASSPHRASE_KEY }));
     await connectionManager.connect(device as Peripheral);
 };
 

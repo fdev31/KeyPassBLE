@@ -164,11 +164,20 @@ export class BLEBackend {
     async connect(peripheral: Peripheral, onConnected: (p: Peripheral) => void, onDisconnected: (p: Peripheral) => void): Promise<void> {
         await this.engine.connect({
             UUID: peripheral.UUID,
-            onConnected: (p) => {
+            onConnected: async (p) => {
                 this.peripheral = p;
                 ApplicationSettings.setString(LAST_DEVICE_KEY, p.UUID);
                 console.log(`[BLEBackend] Connected and saved last device: ${p.UUID}`);
-                onConnected(p);
+                try {
+                    // Discover services and characteristics
+                    await this.engine.discoverAll({ peripheralUUID: p.UUID });
+                    console.log(`[BLEBackend] Discovered services for ${p.UUID}.`);
+                    onConnected(p); // Only call onConnected after discovery
+                } catch (error) {
+                    console.error(`[BLEBackend] Error discovering services for ${p.UUID}: ${error}`);
+                    this.disconnect(); // Disconnect if discovery fails
+                    onDisconnected(p); // Notify disconnection
+                }
             },
             onDisconnected: (p) => {
                 this.peripheral = null;
@@ -181,6 +190,10 @@ export class BLEBackend {
         if (this.peripheral) {
             this.engine.disconnect({ UUID: this.peripheral.UUID });
         }
+    }
+
+    isConnected(): boolean {
+        return this.peripheral !== null;
     }
 
     sendCommand(command: object, timeout = 10000, responseType: 'json' | 'text' = 'json'): Promise<string> {

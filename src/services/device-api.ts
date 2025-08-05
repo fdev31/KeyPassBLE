@@ -1,4 +1,3 @@
-import { ApplicationSettings } from '@nativescript/core';
 import { Peripheral } from '@nativescript-community/ble';
 import { PASSPHRASE_KEY } from './settings';
 import { BLEBackend } from './backends/ble-backend';
@@ -34,8 +33,10 @@ class DeviceAPI implements BackendMethods {
     }
     disconnect() { return this.backend.disconnect(); }
 
-    async authenticate(): Promise<string> {
-        const passphrase = ApplicationSettings.getString(PASSPHRASE_KEY);
+    async authenticate(passphrase: string): Promise<string> {
+        if (!this.backend.isConnected()) {
+            throw new Error("Not connected to a device.");
+        }
         if (!passphrase) throw new Error("Passphrase not found.");
         return this.backend.sendCommand({ cmd: "passphrase", p: passphrase });
     }

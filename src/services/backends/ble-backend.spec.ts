@@ -6,6 +6,7 @@ describe('BLEBackend', () => {
   let mockedBluetooth: jest.Mocked<Bluetooth>;
 
   beforeEach(() => {
+    jest.useFakeTimers(); // Enable fake timers
     // Now, we instantiate the mocked Bluetooth class
     mockedBluetooth = new Bluetooth() as jest.Mocked<Bluetooth>;
     backend = new BLEBackend();
@@ -13,6 +14,11 @@ describe('BLEBackend', () => {
     (backend as any).bluetooth = mockedBluetooth;
     // Mock peripheral for sendCommand tests
     (backend as any).peripheral = { UUID: 'test-uuid' };
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers(); // Run any remaining timers
+    jest.useRealTimers(); // Restore real timers
   });
 
   describe('handleNotification', () => {
@@ -32,7 +38,9 @@ describe('BLEBackend', () => {
 
     it('should handle a single-chunk response without a header', () => {
       const response = 'OK';
+      (backend as any)._currentResponseType = 'text'; // Set response type to text
       backend.handleNotification(textToArrayBuffer(response));
+      jest.runAllTimers(); // Advance timers
       expect(responseResolver).toHaveBeenCalledWith('OK');
     });
 
@@ -41,7 +49,8 @@ describe('BLEBackend', () => {
       const data = '{"status":"success"}';
       const response = header + data;
       backend.handleNotification(textToArrayBuffer(response));
-      expect(responseResolver).toHaveBeenCalledWith('{"status":"success"}');
+      jest.runAllTimers(); // Advance timers
+      expect(responseResolver).toHaveBeenCalledWith({"status":"success"});
     });
 
     it('should handle a multi-chunk response', () => {
@@ -55,13 +64,15 @@ describe('BLEBackend', () => {
       backend.handleNotification(textToArrayBuffer(chunk2));
       expect(responseResolver).not.toHaveBeenCalled();
       backend.handleNotification(textToArrayBuffer(chunk3));
-
-      expect(responseResolver).toHaveBeenCalledWith('{"part1":"hello","part2":"world"}');
+      jest.runAllTimers(); // Advance timers
+      expect(responseResolver).toHaveBeenCalledWith({"part1":"hello","part2":"world"});
     });
 
     it('should handle a malformed header by treating it as a single chunk', () => {
       const malformedHeader = 'this is not a header';
+      (backend as any)._currentResponseType = 'text'; // Set response type to text
       backend.handleNotification(textToArrayBuffer(malformedHeader));
+      jest.runAllTimers(); // Advance timers
       expect(responseResolver).toHaveBeenCalledWith('this is not a header');
     });
 
