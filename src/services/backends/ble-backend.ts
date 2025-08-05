@@ -112,7 +112,12 @@ export class BLEBackend {
         return true;
     }
 
-    startScan(onDeviceDiscovered: (p: Peripheral) => void): Promise<void> {
+    async startScan(onDeviceDiscovered: (p: Peripheral) => void): Promise<void> {
+        await this.requestPermissions();
+        const bluetoothOk = await this.ensureConnectivity();
+        if (!bluetoothOk) {
+            return Promise.reject("Bluetooth is not enabled.");
+        }
         return this.engine.startScanning({
             seconds: 4,
             onDiscovered: onDeviceDiscovered,
