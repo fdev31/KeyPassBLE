@@ -30,7 +30,7 @@
                         <Button :text="L('backup')" @tap="blink($event, backup)" class="btn btn-secondary backup-button"></Button>
 
                         <Label :text="L('recent_backups')" class="setting-label" v-if="backups.length > 0"></Label>
-                        <ListView :items="backups" class="backup-list">
+                        <ListView :key="listKey" :items="backups" class="backup-list">
                             <template v-slot:default="{ item }">
                                 <StackLayout class="backup-item" @tap="selectBackup(item)">
                                     <Label :text="`${L('backup_from')}${formatBackupDate(item.date)}`" />
@@ -95,6 +95,7 @@ const progress = ref(0);
 const progressTitle = ref('');
 const backups = ref([]);
 const selectedBackup = ref(null);
+const listKey = ref(0);
 
 const originalPassphrase = ref(''); // To track if passphrase changed
 
@@ -134,6 +135,7 @@ const loadBackups = () => {
         console.log('No backups found in ApplicationSettings.');
         backups.value = [];
     }
+    listKey.value++;
 };
 
 const saveBackups = () => {
@@ -151,11 +153,22 @@ const addBackup = (dumpData) => {
         date: new Date().toISOString(),
         data: dumpData,
     };
-    backups.value.unshift(newBackup);
-    if (backups.value.length > 3) {
-        backups.value.pop();
+
+    // Filter out any existing backup with the exact same data to avoid duplicates
+    const otherBackups = backups.value.filter(b => b.data !== dumpData);
+
+    // Create a new array with the new backup at the top
+    let newBackups = [newBackup, ...otherBackups];
+
+    // Ensure we only keep the 3 most recent backups
+    if (newBackups.length > 3) {
+        newBackups = newBackups.slice(0, 3);
     }
+
+    // Assign the new array directly to the ref's value to ensure reactivity
+    backups.value = newBackups;
     saveBackups();
+    listKey.value++;
 };
 
 const selectBackup = (backup) => {
@@ -332,6 +345,7 @@ const restore = async () => {
             return;
         }
 
+        addBackup(dumpData);
         const lines = dumpData.split('\n').filter(line => {
             const trimmedLine = line.trim();
             return trimmedLine && !trimmedLine.startsWith('#');
@@ -348,8 +362,11 @@ const restore = async () => {
             index++;
             progress.value = (index / totalLines) * 100;
         }
+        addBackup(dumpData);
         alert('Restore successful!');
         eventBus.notify({ eventName: 'list-needs-refresh' });
+        restoreData.value = '';
+        selectedBackup.value = null;
     } catch (error) {
         console.error("Restore failed:", error);
         alert(`Restore failed: ${error.message || error}`);
