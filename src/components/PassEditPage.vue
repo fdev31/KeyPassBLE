@@ -166,7 +166,7 @@ const typeNewPassword = async () => {
 const typeCurrentPassword = async () => {
     if (!isEditMode.value) return;
     try {
-        await deviceAPI.typePass(originalPassword?.value?.uid);
+        await deviceAPI.typePass(originalPassword.value.uid);
     } catch (error) {
         alert(`${L('failed_to_type_current_password')} ${error.message || error}`);
     }
