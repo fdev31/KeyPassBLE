@@ -15,19 +15,19 @@
                 <Label v-if="isEditMode" :text="L('leave_blank_to_keep_password')" class="setting-label" style="font-size: 12; margin-top: -8; margin-bottom: 8;"></Label>
                 <GridLayout columns="*, auto, auto" verticalAlignment="center">
                     <TextField col="0" v-model="form.password" :secure="!showPassword" :hint="L('enter_password')" class="setting-input" style="margin-bottom: 0;"></TextField>
-                    <Button col="1" :text="showPassword ? L('hide') : L('show')" @tap="togglePasswordVisibility" class="btn btn-secondary toggle-button"></Button>
-                    <Button col="2" text="🎲" @tap="generatePassword" class="btn btn-secondary toggle-button"></Button>
+                    <Button col="1" :text="showPassword ? L('hide') : L('show')" @tap="blink($event, togglePasswordVisibility)" class="btn btn-secondary toggle-button"></Button>
+                    <Button col="2" text="🎲" @tap="blink($event, generatePassword)" class="btn btn-secondary toggle-button"></Button>
                 </GridLayout>
 
                 <Label :text="L('keyboard_layout')" class="setting-label"></Label>
                 <ListPicker :items="layoutLabels" v-model="layoutIndex" class="list-picker" />
 
                 <GridLayout v-if="isEditMode && passwordChanged" columns="*,*" class="type-buttons-container">
-                    <Button col="0" :text="L('type_new')" @tap="typeNewPassword" class="btn btn-secondary"></Button>
-                    <Button col="1" :text="L('type_current')" @tap="typeCurrentPassword" class="btn btn-secondary"></Button>
+                    <Button col="0" :text="L('type_new')" @tap="blink($event, typeNewPassword)" class="btn btn-secondary"></Button>
+                    <Button col="1" :text="L('type_current')" @tap="blink($event, typeCurrentPassword)" class="btn btn-secondary"></Button>
                 </GridLayout>
 
-                <Button :text="L('save')" @tap="savePassword" class="btn btn-primary save-button"></Button>
+                <Button :text="L('save')" @tap="blink($event, savePassword)" class="btn btn-primary save-button"></Button>
             </StackLayout>
         </ScrollView>
     </Page>
@@ -39,6 +39,8 @@ import { deviceAPI } from '../services/device-api';
 import { NavigatedData } from '@nativescript/core';
 import { passwordStore } from '../services/store';
 import { localize as L } from '@nativescript/localize';
+import { blink } from '../services/domUtils';
+
 
 // Define a type for our password entries for clarity
 interface PasswordEntry {

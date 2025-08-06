@@ -19,15 +19,15 @@
                     <Label :text="L('passphrase')" class="setting-label"></Label>
                     <GridLayout columns="*, auto" verticalAlignment="center">
                         <TextField col="0" v-model="passphrase" :secure="!showPassphrase" :hint="L('enter_passphrase')" class="setting-input" style="margin-bottom: 0;"></TextField>
-                        <Button col="1" :text="showPassphrase ? L('hide') : L('show')" @tap="togglePassphraseVisibility" class="btn btn-secondary toggle-button"></Button>
+                        <Button col="1" :text="showPassphrase ? L('hide') : L('show')" @tap="blink($event, togglePassphraseVisibility)" class="btn btn-secondary toggle-button"></Button>
                     </GridLayout>
 
                     <Label :text="L('wifi_connectivity')" class="setting-label"></Label>
-                    <Button :text="L('set_wifi_password')" @tap="setWifiPassword" class="btn btn-secondary"></Button>
+                    <Button :text="L('set_wifi_password')" @tap="blink($event, setWifiPassword)" class="btn btn-secondary"></Button>
 
                     <Label :text="L('backup_and_restore')" class="setting-label"></Label>
                     <StackLayout>
-                        <Button :text="L('backup')" @tap="backup" class="btn btn-secondary backup-button"></Button>
+                        <Button :text="L('backup')" @tap="blink($event, backup)" class="btn btn-secondary backup-button"></Button>
 
                         <Label :text="L('recent_backups')" class="setting-label" v-if="backups.length > 0"></Label>
                         <ListView :items="backups" class="backup-list">
@@ -38,7 +38,7 @@
                             </template>
                         </ListView>
 
-                        <Button :text="backupButtonText" @tap="restore" class="btn btn-secondary"></Button>
+                        <Button :text="backupButtonText" @tap="blink($event, restore)" class="btn btn-secondary"></Button>
                         <TextView
                             v-model="restoreData"
                             :hint="L('paste_backup_data')"
@@ -50,7 +50,7 @@
                     </StackLayout>
 
                     <Label :text="L('danger_zone')" class="setting-label danger-zone-label"></Label>
-                    <Button :text="L('factory_reset')" @tap="factoryReset" class="btn btn-danger"></Button>
+                    <Button :text="L('factory_reset')" @tap="blink($event, factoryReset)" class="btn btn-danger"></Button>
 
                     <Label :text="`Version: ${version}`" class="version-label"></Label>
                 </StackLayout>
@@ -76,6 +76,8 @@ import { passwordStore } from '../services/store';
 import { localize as L } from '@nativescript/localize';
 import { SecureStorage } from '@heywhy/ns-secure-storage';
 import packageInfo from '../../package.json';
+import { blink } from '../services/domUtils';
+
 
 const version = computed(() => packageInfo.version);
 

@@ -35,7 +35,7 @@
                 <!-- Password List -->
                 <ScrollView row="1" class="list-container">
                     <StackLayout>
-                        <StackLayout v-for="entry in passwordStore.entries" :key="entry.uid" @tap="onPasswordSelected(entry)" @longPress="onEditPassword(entry)" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
+                        <StackLayout v-for="entry in passwordStore.entries" :key="entry.uid" @tap="blink($event, () => onPasswordSelected(entry))" @longPress="onEditPassword(entry)" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
                             <Label :text="entry.name" class="list-item-name"></Label>
                         </StackLayout>
                         <Label v-if="passwordStore.entries.length === 0" :text="L('no_passwords_found')" class="status-label"></Label>
@@ -68,6 +68,7 @@ import AdvancedOptions from './AdvancedOptions.vue';
 import { passwordStore, appStore } from '../services/store';
 import { localize as L } from '@nativescript/localize';
 import { SecureStorage } from '@heywhy/ns-secure-storage';
+import { blink } from '../services/domUtils';
 
 const secureStorage = new SecureStorage();
 
