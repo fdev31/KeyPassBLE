@@ -8,9 +8,9 @@
                 <Label :text="L('name')" class="setting-label"></Label>
                 <TextField v-model="form.name" :hint="L('enter_name_for_password')" class="setting-input"></TextField>
 
-                <GridLayout columns="auto, *" class="setting-label">
+                <GridLayout columns="auto, auto" class="setting-label">
                     <Label col="0" :text="L('password')"></Label>
-                    <Label col="1" :text="`(${form.password.length})`" :backgroundColor="passwordStrengthColor" vif="form.password.length > 0" class="password-strength-indicator"></Label>
+                    <Label col="1" :text="`(${form.password.length || originalPassword?.len || 0})`" :backgroundColor="passwordStrengthColor" vif="form.password.length > 0" class="password-strength-indicator"></Label>
                 </GridLayout>
                 <Label v-if="isEditMode" :text="L('leave_blank_to_keep_password')" class="setting-label" style="font-size: 12; margin-top: -8; margin-bottom: 8;"></Label>
                 <GridLayout columns="*, auto, auto" verticalAlignment="center">
@@ -83,7 +83,7 @@ const layoutIndex = computed({
 });
 
 const passwordStrengthColor = computed(() => {
-    const length = form.password.length;
+    const length = form.password.length || originalPassword?.value?.len || 0;
     if (length <= 10) return '#FF0000'; // Red
     if (length >= 16) return '#00FF00'; // Green
 
@@ -166,7 +166,7 @@ const typeNewPassword = async () => {
 const typeCurrentPassword = async () => {
     if (!isEditMode.value) return;
     try {
-        await deviceAPI.typePass(originalPassword.value.uid);
+        await deviceAPI.typePass(originalPassword?.value?.uid);
     } catch (error) {
         alert(`${L('failed_to_type_current_password')} ${error.message || error}`);
     }
@@ -265,10 +265,13 @@ const savePassword = async () => {
 
 .password-strength-indicator {
     margin-left: 8;
-    padding: 2 4;
-    border-radius: 4;
+    padding: 4 8;
+    border-radius: 9999;
     color: white;
     font-size: 14;
+    font-weight: bold;
     vertical-align: middle;
+    text-align: center;
+    min-width: 40;
 }
 </style>
