@@ -1,6 +1,9 @@
 <template>
     <Page @navigatedTo="onNavigatedTo">
         <ActionBar :title="actionBarTitle" class="action-bar">
+            <ActionItem @tap="onSettings" ios:position="right" android:position="actionBar">
+                <Label text="⚙️" fontSize="24" verticalAlignment="center" padding="0 10 0 0" />
+            </ActionItem>
         </ActionBar>
         <GridLayout rows="auto, *, auto" class="page-container">
 
@@ -41,10 +44,9 @@
 
                 <StackLayout row="2">
                     <!-- Action Buttons -->
-                    <GridLayout columns="*, *, *" class="action-buttons-container">
+                    <GridLayout columns="*, *" class="action-buttons-container">
                         <Button col="0" text="➕" @tap="onAddNewPassword" class="btn btn-secondary icon-button"></Button>
                         <Button col="1" text="📎" @tap="openAdvancedOptions" class="btn btn-primary icon-button"></Button>
-                        <Button col="2" text="✅" @tap="onSettings" class="btn btn-secondary icon-button"></Button>
                     </GridLayout>
                 </StackLayout>
             </template>
