@@ -15,6 +15,7 @@ interface BackendMethods {
 
 class DeviceAPI implements BackendMethods {
     private backend: BLEBackend; // | HTTPBackend in future
+    private listCache: Promise<any> | null = null;
 
     constructor() {
         this.backend = new BLEBackend();
@@ -56,17 +57,29 @@ class DeviceAPI implements BackendMethods {
     fetchPass(id: number) { return this.cmd("fetchPass", { id }); }
 
     editPass(id: number, name?: string, password?: string, layout?: number) {
+        this.listCache = null;
         return this.cmd("editPass", { id, ...name && { name }, ...password && { password }, ...layout && { layout } });
     }
 
-    list() { return this.cmd("list"); }
-    reset() { return this.cmd("reset"); }
+    list() {
+        if (!this.listCache) {
+            this.listCache = this.cmd("list");
+        }
+        return this.listCache;
+    }
+    reset() {
+        this.listCache = null;
+        return this.cmd("reset");
+    }
     updateWifiPass(newPass: string) { return this.cmd("updateWifiPass", { newPass }); }
     passphrase(p: string) { return this.cmd("passphrase", { p }); }
     // dump() { return this.cmd("dump", {}, 10000, 'text'); }
     dumpOne(uid: number) { return this.cmd("dumpOne", { uid }, 10000, 'text'); }
     // restore(data: string) { return this.cmd("restore", { data }); }
-    restoreOne(uid: number, data: string) { return this.cmd("restoreOne", { uid, data }); }
+    restoreOne(uid: number, data: string) {
+        this.listCache = null;
+        return this.cmd("restoreOne", { uid, data });
+    }
 }
 
 export const deviceAPI = new DeviceAPI();
