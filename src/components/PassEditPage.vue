@@ -8,7 +8,10 @@
                 <Label :text="L('name')" class="setting-label"></Label>
                 <TextField v-model="form.name" :hint="L('enter_name_for_password')" class="setting-input"></TextField>
 
-                <Label :text="L('password')" class="setting-label"></Label>
+                <GridLayout columns="auto, *" class="setting-label">
+                    <Label col="0" :text="L('password')"></Label>
+                    <Label col="1" :text="`(${form.password.length})`" :backgroundColor="passwordStrengthColor" vif="form.password.length > 0" class="password-strength-indicator"></Label>
+                </GridLayout>
                 <Label v-if="isEditMode" :text="L('leave_blank_to_keep_password')" class="setting-label" style="font-size: 12; margin-top: -8; margin-bottom: 8;"></Label>
                 <GridLayout columns="*, auto, auto" verticalAlignment="center">
                     <TextField col="0" v-model="form.password" :secure="!showPassword" :hint="L('enter_password')" class="setting-input" style="margin-bottom: 0;"></TextField>
@@ -79,6 +82,18 @@ const layoutIndex = computed({
     }
 });
 
+const passwordStrengthColor = computed(() => {
+    const length = form.password.length;
+    if (length <= 10) return '#FF0000'; // Red
+    if (length >= 16) return '#00FF00'; // Green
+
+    // Calculate the transition from red to green
+    const percentage = (length - 10) / (16 - 10);
+    const red = Math.round(255 * (1 - percentage));
+    const green = Math.round(255 * percentage);
+    return `#${red.toString(16).padStart(2, '0')}${green.toString(16).padStart(2, '0')}00`;
+});
+
 const onNavigatingTo = (event: NavigatedData) => {
     if (event.isBack) return;
 
@@ -120,11 +135,12 @@ const togglePasswordVisibility = () => {
 
 const generatePassword = () => {
     // Use the length of the original password if available, otherwise default to 16
-    const length = isEditMode.value ? originalPassword.value.len : 16;
+    let length = isEditMode.value ? (form.password.length || originalPassword.value.len) : 16;
     if (length === 0) {
         alert(L('cannot_determine_password_length'));
         return;
     }
+    if (length > 31) length = 31;
     const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{};:,.<>/?";
     let newPassword = "";
     for (let i = 0, n = charset.length; i < length; ++i) {
@@ -166,7 +182,7 @@ const savePassword = async () => {
 
     try {
         await deviceAPI.editPass(uidToSave, form.name, form.password, form.layout);
-        
+
         const newLen = form.password ? form.password.length : originalPassword.value?.len;
 
         passwordStore.addOrUpdate({
@@ -245,5 +261,14 @@ const savePassword = async () => {
 
 .list-picker {
     height: 120;
+}
+
+.password-strength-indicator {
+    margin-left: 8;
+    padding: 2 4;
+    border-radius: 4;
+    color: white;
+    font-size: 14;
+    vertical-align: middle;
 }
 </style>
