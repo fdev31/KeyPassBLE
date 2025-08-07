@@ -57,7 +57,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, computed, watch, $navigateTo, $showModal } from 'nativescript-vue';
+import { ref, onMounted, computed, watch, $navigateTo } from 'nativescript-vue';
 import { connectionManager, ConnectionState } from '../services/connection-manager';
 import { Peripheral } from '@nativescript-community/ble';
 import { ApplicationSettings, Dialogs } from '@nativescript/core';
@@ -378,20 +378,14 @@ const onSettings = () => {
     });
 };
 
-const openAdvancedOptions = async () => {
-    const result = await $showModal(AdvancedOptions, {
-        props: {
-            endWithReturn: endWithReturn.value,
-            useLayoutOverride: useLayoutOverride.value,
-            selectedLayout: selectedLayout.value
+const openAdvancedOptions = () => {
+    $navigateTo(AdvancedOptions, {
+        transition: {
+            name: 'slideTop',
+            duration: 300,
+            curve: 'easeOut'
         }
     });
-
-    if (result) {
-        endWithReturn.value = result.endWithReturn;
-        useLayoutOverride.value = result.useLayoutOverride;
-        selectedLayout.value = result.selectedLayout;
-    }
 };
 </script>
 

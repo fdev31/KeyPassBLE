@@ -1,43 +1,48 @@
 <template>
-    <GridLayout verticalAlignment="center" class="modal-container-wrapper" row="0" col="0" rows="*, auto, *" columns="*">
-        <StackLayout class="modal-container" row="1" horizontalAlignment="center" verticalAlignment="center">
-            <Label :text="L('advanced_options')" class="modal-title"></Label>
+    <Page>
+        <ActionBar :title="L('advanced_options')" class="action-bar">
+            <NavigationButton :text="L('back')" />
+        </ActionBar>
+        <ScrollView>
+            <StackLayout class="page-container">
 
-            <GridLayout columns="*, auto" class="option-container">
-                <Label col="0" :text="L('end_with_return_key')" class="option-label"></Label>
-                <Switch col="1" v-model="localEndWithReturn" class="option-switch"></Switch>
-            </GridLayout>
+                <GridLayout columns="*, auto" class="option-container">
+                    <Label col="0" :text="L('end_with_return_key')" class="option-label"></Label>
+                    <Switch col="1" v-model="localEndWithReturn" class="option-switch"></Switch>
+                </GridLayout>
 
-            <GridLayout columns="*, auto" class="option-container">
-                <Label col="0" :text="L('use_layout_override')" class="option-label"></Label>
-                <Switch col="1" v-model="localUseLayoutOverride" class="option-switch"></Switch>
-            </GridLayout>
+                <GridLayout columns="*, auto" class="option-container">
+                    <Label col="0" :text="L('use_layout_override')" class="option-label"></Label>
+                    <Switch col="1" v-model="localUseLayoutOverride" class="option-switch"></Switch>
+                </GridLayout>
 
-            <Label :text="L('keyboard_layout')" class="option-label"></Label>
-            <ListPicker :items="layoutLabels" v-model="localSelectedLayout" :isEnabled="localUseLayoutOverride" class="list-picker" />
+                <Label :text="L('keyboard_layout')" class="option-label"></Label>
+                <ListPicker :items="layoutLabels" v-model="localSelectedLayout" :isEnabled="localUseLayoutOverride" class="list-picker" />
 
-            <GridLayout columns="*, *" class="action-buttons">
-                <Button col="0" :text="L('cancel')" @tap="closeModal" class="btn btn-secondary"></Button>
-                <Button col="1" :text="L('apply')" @tap="applyAndClose" class="btn btn-primary"></Button>
-            </GridLayout>
-        </StackLayout>
-    </GridLayout>
+                <GridLayout columns="*, *" class="action-buttons">
+                    <Button col="0" :text="L('cancel')" @tap="cancel" class="btn btn-secondary"></Button>
+                    <Button col="1" :text="L('save')" @tap="save" class="btn btn-primary"></Button>
+                </GridLayout>
+
+            </StackLayout>
+        </ScrollView>
+    </Page>
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'nativescript-vue';
-import { $closeModal } from 'nativescript-vue';
+import { ref, computed, onMounted } from 'nativescript-vue';
+import { $navigateBack } from 'nativescript-vue';
 import { localize as L } from '@nativescript/localize';
+import { ApplicationSettings } from '@nativescript/core';
 
-const props = defineProps({
-    endWithReturn: Boolean,
-    useLayoutOverride: Boolean,
-    selectedLayout: Number,
-});
+// Application Settings Keys
+const SETTING_END_WITH_RETURN = 'settingEndWithReturn';
+const SETTING_USE_LAYOUT_OVERRIDE = 'settingUseLayoutOverride';
+const SETTING_SELECTED_LAYOUT = 'settingSelectedLayout';
 
-const localEndWithReturn = ref(props.endWithReturn);
-const localUseLayoutOverride = ref(props.useLayoutOverride);
-const localSelectedLayout = ref(props.selectedLayout);
+const localEndWithReturn = ref(true);
+const localUseLayoutOverride = ref(false);
+const localSelectedLayout = ref(0);
 
 const LAYOUT_OPTIONS = [
     { label: 'Bitlocker', value: -1 },
@@ -47,33 +52,31 @@ const LAYOUT_OPTIONS = [
 
 const layoutLabels = computed(() => LAYOUT_OPTIONS.map(opt => opt.label));
 
-const applyAndClose = () => {
-    $closeModal({
-        endWithReturn: localEndWithReturn.value,
-        useLayoutOverride: localUseLayoutOverride.value,
-        selectedLayout: localSelectedLayout.value,
-    });
+onMounted(() => {
+    localEndWithReturn.value = ApplicationSettings.getBoolean(SETTING_END_WITH_RETURN, true);
+    localUseLayoutOverride.value = ApplicationSettings.getBoolean(SETTING_USE_LAYOUT_OVERRIDE, false);
+    localSelectedLayout.value = ApplicationSettings.getNumber(SETTING_SELECTED_LAYOUT, 0);
+});
+
+const save = () => {
+    ApplicationSettings.setBoolean(SETTING_END_WITH_RETURN, localEndWithReturn.value);
+    ApplicationSettings.setBoolean(SETTING_USE_LAYOUT_OVERRIDE, localUseLayoutOverride.value);
+    ApplicationSettings.setNumber(SETTING_SELECTED_LAYOUT, localSelectedLayout.value);
+    $navigateBack();
 };
 
-const closeModal = () => {
-    $closeModal();
+const cancel = () => {
+    $navigateBack();
 };
 </script>
 
 <style scoped>
-.modal-container-wrapper {
-    margin: 16;
+.action-bar {
+    background-color: #4F46E5;
+    color: white;
 }
-.modal-container {
+.page-container {
     padding: 16;
-    background-color: white;
-    border-radius: 8;
-}
-.modal-title {
-    font-size: 20;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 16;
 }
 .option-container {
     margin-top: 8;
@@ -88,13 +91,26 @@ const closeModal = () => {
 .option-switch {
     vertical-align: middle;
 }
-.list-picker { height: 120; }
-.action-buttons { margin-top: 16; }
+.list-picker {
+    height: 120;
+    margin-top: 8;
+}
+.action-buttons {
+    margin-top: 16;
+}
 .btn {
     font-size: 16;
-    padding: 8;
+    padding: 12;
     border-radius: 8;
 }
-.btn-primary { background-color: #4F46E5; color: white; }
-.btn-secondary { background-color: #6B7280; color: white; margin-right: 8; }
+.btn-primary {
+    background-color: #4F46E5;
+    color: white;
+    margin-left: 8;
+}
+.btn-secondary {
+    background-color: #6B7280;
+    color: white;
+    margin-right: 8;
+}
 </style>
