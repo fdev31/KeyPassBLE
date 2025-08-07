@@ -462,9 +462,6 @@ const openAdvancedOptions = () => {
     }
 
     /* Bottom Action Buttons */
-    .action-buttons-container {
-        margin-top: 16;
-    }
     .action-buttons-container .btn-primary { margin-left: 8; }
     .action-buttons-container .btn-secondary { margin-right: 8; }
 
