@@ -22,7 +22,6 @@
                     <Switch col="1" v-model="localUseLayoutOverride" class="option-switch"></Switch>
                 </GridLayout>
 
-                <Label :text="L('keyboard_layout')" class="option-label"></Label>
                 <ListPicker :items="layoutLabels" v-model="localSelectedLayout" :isEnabled="localUseLayoutOverride" class="list-picker" />
 
             </StackLayout>
