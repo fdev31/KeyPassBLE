@@ -409,8 +409,8 @@ const openAdvancedOptions = () => {
     .btn {
         border-radius: 8;
         font-size: 16;
-        padding: 12 16;
-        margin: 0; /* Remove default margins */
+        padding: 1ex 1em;
+        margin: .5ex;
     }
     .btn-primary {
         background-color: #4F46E5;
@@ -422,12 +422,9 @@ const openAdvancedOptions = () => {
     }
     .icon-button {
         font-size: 20;
-        margin: 12; /* Let padding define the size */
-        padding: 0;
         border-radius: 24; /* High radius to ensure it's round */
         text-align: center;
         vertical-align: middle;
-        /* REMOVED width and height to prevent cropping */
     }
 
     /* Disconnected View Specifics */
@@ -462,6 +459,10 @@ const openAdvancedOptions = () => {
     }
 
     /* Bottom Action Buttons */
+    .action-buttons-container {
+        margin-top: 10;
+        margin-bottom: 10;
+    }
     .action-buttons-container .btn-primary { margin-left: 8; }
     .action-buttons-container .btn-secondary { margin-right: 8; }
 
