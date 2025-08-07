@@ -30,8 +30,6 @@
 
             <!-- List Mode -->
             <template v-if="currentMode === 'list'">
-                <Label row="0" :text="statusMessage" textWrap="true" class="status-label"></Label>
-
                 <!-- Password List -->
                 <ScrollView row="1" class="list-container">
                     <StackLayout>
@@ -49,6 +47,7 @@
                         <Button col="0" text="➕" @tap="onAddNewPassword" class="btn btn-secondary icon-button"></Button>
                         <Button col="1" text="📎" @tap="openAdvancedOptions" class="btn btn-primary icon-button"></Button>
                     </GridLayout>
+                    <Label :text="statusMessage" textWrap="true" class="status-label"></Label>
                 </StackLayout>
             </template>
 
@@ -400,10 +399,10 @@ const openAdvancedOptions = () => {
         padding: 16;
     }
     .status-label {
-        font-size: 16;
+        font-size: 14;
         text-align: center;
         color: #6B7280; /* Muted text color */
-        margin: 8 0;
+        margin: 2 0;
     }
 
     /* Buttons */
