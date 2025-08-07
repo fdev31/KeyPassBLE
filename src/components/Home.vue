@@ -34,7 +34,7 @@
                 <TextField row="0" v-model="searchQuery" :hint="L('search_passwords_placeholder')" class="search-field" />
 
                 <!-- Password List -->
-                <ScrollView row="1" class="list-container">
+                <ScrollView row="2" class="list-container">
                     <StackLayout>
                         <GridLayout v-for="entry in filteredPasswordEntries" :key="entry.uid" columns="*, auto" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
                             <Button col="0" :text="entry.name" @tap="blink($event, () => onPasswordSelected(entry))" class="btn btn-primary password-button"></Button>
@@ -44,7 +44,7 @@
                     </StackLayout>
                 </ScrollView>
 
-                <StackLayout row="2">
+                <StackLayout row="3">
                     <!-- Action Buttons -->
                     <GridLayout columns="*, *" class="action-buttons-container">
                         <Button col="0" text="➕" @tap="onAddNewPassword" class="btn btn-secondary icon-button"></Button>
