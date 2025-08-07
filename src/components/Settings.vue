@@ -17,9 +17,9 @@
                     <TextField v-model="deviceName" :hint="L('enter_device_name')" class="setting-input"></TextField>
 
                     <Label :text="L('passphrase')" class="setting-label"></Label>
-                    <GridLayout columns="*, auto" verticalAlignment="center">
-                        <TextField col="0" v-model="passphrase" :secure="!showPassphrase" :hint="L('enter_passphrase')" class="setting-input" style="margin-bottom: 0;"></TextField>
-                        <Button col="1" :text="showPassphrase ? L('hide') : L('show')" @tap="blink($event, togglePassphraseVisibility)" class="btn btn-secondary toggle-button"></Button>
+                    <GridLayout columns="*, auto" class="input-with-icon">
+                        <TextField col="0" v-model="passphrase" :secure="!showPassphrase" :hint="L('enter_passphrase')" class="setting-input-transparent"></TextField>
+                        <Label col="1" text="👁️" @tap="blink($event, togglePassphraseVisibility)" class="icon-button"></Label>
                     </GridLayout>
 
                     <Label :text="L('wifi_connectivity')" class="setting-label"></Label>
@@ -463,12 +463,27 @@ const factoryReset = async () => {
     color: white;
 }
 
-.toggle-button {
-    margin-left: 8;
-    width: auto; /* Adjust width to content */
-    margin-top: 0;
-    margin-bottom: 0;
-    horizontal-align: right;
+.setting-input-transparent {
+    border-width: 0;
+    background-color: transparent;
+    padding: 12;
+    font-size: 16;
+    color: #374151;
+}
+
+.input-with-icon {
+    border-width: 1;
+    border-color: #E5E7EB;
+    border-radius: 8;
+    margin-bottom: 8;
+    padding-right: 8;
+}
+
+.icon-button {
+    font-size: 24;
+    color: #6B7280;
+    padding: 8;
+    vertical-align: middle;
 }
 
 .danger-zone-label {

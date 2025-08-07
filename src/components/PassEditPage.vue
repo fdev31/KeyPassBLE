@@ -10,21 +10,21 @@
 
                 <GridLayout columns="auto, auto" class="setting-label">
                     <Label col="0" :text="L('password')"></Label>
-                    <Label col="1" :text="`(${form.password.length || originalPassword?.len || 0})`" :backgroundColor="passwordStrengthColor" vif="form.password.length > 0" class="password-strength-indicator"></Label>
+                    <Label col="1" :text="`${form.password.length || originalPassword?.len || 0}`" :backgroundColor="passwordStrengthColor" vif="form.password.length > 0" class="password-strength-indicator"></Label>
                 </GridLayout>
                 <Label v-if="isEditMode" :text="L('leave_blank_to_keep_password')" class="setting-label" style="font-size: 12; margin-top: -8; margin-bottom: 8;"></Label>
-                <GridLayout columns="*, auto, auto" verticalAlignment="center">
-                    <TextField col="0" v-model="form.password" :secure="!showPassword" :hint="L('enter_password')" class="setting-input" style="margin-bottom: 0;"></TextField>
-                    <Button col="1" :text="showPassword ? L('hide') : L('show')" @tap="blink($event, togglePasswordVisibility)" class="btn btn-secondary toggle-button"></Button>
-                    <Button col="2" text="🎲" @tap="blink($event, generatePassword)" class="btn btn-secondary toggle-button"></Button>
+                <GridLayout columns="*, auto, auto" class="input-with-icon">
+                    <TextField col="0" v-model="form.password" :secure="!showPassword" :hint="L('enter_password')" class="setting-input-transparent"></TextField>
+                    <Label col="1" text="👁️" @tap="blink($event, togglePasswordVisibility)" class="icon-button"></Label>
+                    <Label col="2" text="🎲" @tap="blink($event, generatePassword)" class="icon-button"></Label>
                 </GridLayout>
 
                 <Label :text="L('keyboard_layout')" class="setting-label"></Label>
                 <ListPicker :items="layoutLabels" v-model="layoutIndex" class="list-picker" />
 
                 <GridLayout v-if="isEditMode && passwordChanged" columns="*,*" class="type-buttons-container">
-                    <Button col="0" :text="L('type_new')" @tap="blink($event, typeNewPassword)" class="btn btn-secondary"></Button>
-                    <Button col="1" :text="L('type_current')" @tap="blink($event, typeCurrentPassword)" class="btn btn-secondary"></Button>
+                    <Button col="0" :text="L('type_new')" @tap="blink($event, typeNewPassword)" class="btn btn-secondary" style="margin-right: 8;"></Button>
+                    <Button col="1" :text="L('type_current')" @tap="blink($event, typeCurrentPassword)" class="btn btn-secondary" style="margin-left: 8;"></Button>
                 </GridLayout>
 
                 <Button :text="L('save')" @tap="blink($event, savePassword)" class="btn btn-primary save-button"></Button>
@@ -241,16 +241,27 @@ const savePassword = async () => {
     margin-top: 16;
 }
 
-.btn-secondary {
-    background-color: #6B7280;
-    color: white;
+.setting-input-transparent {
+    border-width: 0;
+    background-color: transparent;
+    padding: 12;
+    font-size: 16;
+    color: #374151;
 }
 
-.toggle-button {
-    margin-left: 8;
-    width: auto;
-    padding-top: 8;
-    padding-bottom: 8;
+.input-with-icon {
+    border-width: 1;
+    border-color: #E5E7EB;
+    border-radius: 8;
+    margin-bottom: 8;
+    padding-right: 8;
+}
+
+.icon-button {
+    font-size: 24;
+    color: #6B7280;
+    padding: 8;
+    vertical-align: middle;
 }
 
 .type-buttons-container {

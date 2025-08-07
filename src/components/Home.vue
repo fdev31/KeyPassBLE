@@ -35,9 +35,10 @@
                 <!-- Password List -->
                 <ScrollView row="1" class="list-container">
                     <StackLayout>
-                        <StackLayout v-for="entry in passwordStore.entries" :key="entry.uid" @tap="blink($event, () => onPasswordSelected(entry))" @longPress="onEditPassword(entry)" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
-                            <Label :text="entry.name" class="list-item-name"></Label>
-                        </StackLayout>
+                        <GridLayout v-for="entry in passwordStore.entries" :key="entry.uid" columns="*, auto" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
+                            <Button col="0" :text="entry.name" @tap="blink($event, () => onPasswordSelected(entry))" class="btn btn-primary password-button"></Button>
+                            <Button col="1" text="✏️" @tap="onEditPassword(entry)" class="btn btn-secondary icon-button edit-button"></Button>
+                        </GridLayout>
                         <Label v-if="passwordStore.entries.length === 0" :text="L('no_passwords_found')" class="status-label"></Label>
                     </StackLayout>
                 </ScrollView>
@@ -396,30 +397,86 @@ const openAdvancedOptions = async () => {
 
 
 <style>
-    .action-bar { background-color: #4F46E5; color: white; }
-    .page-container { padding: 16; }
-    .button-grid { margin-bottom: 16; }
-    .btn { border-radius: 8; font-size: 16; padding: 12; }
-    .btn-primary { background-color: #4F46E5; color: white; margin-right: 8; }
-    .btn-secondary { background-color: #b2b2b0; color: white; margin-left: 8; }
-    .status-label { font-size: 16; text-align: center; color: #6B7280; margin-bottom: 16; }
-    .list-container { border-width: 1; border-color: #E5E7EB; border-radius: 8; }
-    .list-item {
-        padding: 16;
-        border-bottom-width: 1;
-        border-bottom-color: #E5E7EB;
-        animation-name: fadeIn;
-        animation-duration: 0.5s;
-        animation-fill-mode: forwards;
+    /* Global & Theming */
+    .action-bar {
+        background-color: #4F46E5; /* Primary brand color */
+        color: white;
     }
-    .list-item-name { font-size: 18; font-weight: bold; color: #111827; }
-    .list-item-uuid { font-size: 14; color: #6B7280; }
-    .list-item.selected { background-color: #E0E7FF; }
-    .type-button { margin-bottom: 16; }
-    .option-label { font-size: 16; font-weight: bold; margin-bottom: 8; color: #111827; }
-    .option-switch { margin-bottom: 16; }
-    .action-buttons-container { margin-top: 16; margin-bottom: 16; }
-    .icon-button { font-size: 24; padding: 8; width: 50; height: 50; border-radius: 25; text-align: center; vertical-align: center; }
+    .page-container {
+        padding: 16;
+    }
+    .status-label {
+        font-size: 16;
+        text-align: center;
+        color: #6B7280; /* Muted text color */
+        margin: 8 0;
+    }
+
+    /* Buttons */
+    .btn {
+        border-radius: 8;
+        font-size: 16;
+        padding: 12 16;
+        margin: 0; /* Remove default margins */
+    }
+    .btn-primary {
+        background-color: #4F46E5;
+        color: white;
+    }
+    .btn-secondary {
+        background-color: #E5E7EB; /* Lighter, neutral color */
+        color: #1F2937; /* Darker text for contrast */
+    }
+    .icon-button {
+        font-size: 20;
+        margin: 12; /* Let padding define the size */
+        padding: 0;
+        border-radius: 24; /* High radius to ensure it's round */
+        text-align: center;
+        vertical-align: middle;
+        /* REMOVED width and height to prevent cropping */
+    }
+
+    /* Disconnected View Specifics */
+    .button-grid {
+        margin-bottom: 16;
+    }
+    .button-grid .btn-primary { margin-right: 8; }
+    .button-grid .btn-secondary { margin-left: 8; }
+    .list-item-uuid { font-size: 14; color: #6B7280; } /* For device list */
+    .list-item-name { font-size: 18; font-weight: bold; color: #111827; } /* For device list */
+
+
+    /* Password List */
+    .list-container {
+        /* The border and margin have been removed for a more compact and lightweight look. */
+    }
+    .list-item {
+        margin-bottom: 8; /* Spacing between items */
+    }
+    .list-item:last-child {
+        margin-bottom: 0; /* No margin on the last item */
+    }
+    .password-button {
+        text-align: left;
+        margin-right: 8;
+    }
+    .edit-button {
+        margin-left: 8;
+    }
+    .list-item.selected .password-button {
+        background-color: #6D28D9; /* A darker shade for selection */
+    }
+
+    /* Bottom Action Buttons */
+    .action-buttons-container {
+        margin-top: 16;
+    }
+    .action-buttons-container .btn-primary { margin-left: 8; }
+    .action-buttons-container .btn-secondary { margin-right: 8; }
+
+
+    /* Animations (Keep as is) */
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
