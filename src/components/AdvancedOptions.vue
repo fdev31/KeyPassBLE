@@ -2,6 +2,12 @@
     <Page>
         <ActionBar :title="L('advanced_options')" class="action-bar">
             <NavigationButton :text="L('back')" />
+            <ActionItem @tap="save" v-if="isIOS"
+                ios.systemIcon="16" ios.position="right">
+            </ActionItem>
+            <ActionItem @tap="save" v-if="!isIOS"
+                android.systemIcon="ic_menu_save" android.position="actionBar">
+            </ActionItem>
         </ActionBar>
         <ScrollView>
             <StackLayout class="page-container">
@@ -19,11 +25,6 @@
                 <Label :text="L('keyboard_layout')" class="option-label"></Label>
                 <ListPicker :items="layoutLabels" v-model="localSelectedLayout" :isEnabled="localUseLayoutOverride" class="list-picker" />
 
-                <GridLayout columns="*, *" class="action-buttons">
-                    <Button col="0" :text="L('cancel')" @tap="cancel" class="btn btn-secondary"></Button>
-                    <Button col="1" :text="L('save')" @tap="save" class="btn btn-primary"></Button>
-                </GridLayout>
-
             </StackLayout>
         </ScrollView>
     </Page>
@@ -33,7 +34,7 @@
 import { ref, computed, onMounted } from 'nativescript-vue';
 import { $navigateBack } from 'nativescript-vue';
 import { localize as L } from '@nativescript/localize';
-import { ApplicationSettings } from '@nativescript/core';
+import { ApplicationSettings, isIOS } from '@nativescript/core';
 
 // Application Settings Keys
 const SETTING_END_WITH_RETURN = 'settingEndWithReturn';

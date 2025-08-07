@@ -2,6 +2,12 @@
     <Page @navigatingTo="onNavigatingTo">
         <ActionBar :title="isEditMode ? L('edit_password') : L('add_new_password')" class="action-bar">
             <NavigationButton :text="L('back')" />
+            <ActionItem @tap="savePassword" v-if="isIOS"
+                ios.systemIcon="16" ios.position="right">
+            </ActionItem>
+            <ActionItem @tap="savePassword" v-if="!isIOS"
+                android.systemIcon="ic_menu_save" android.position="actionBar">
+            </ActionItem>
         </ActionBar>
         <ScrollView>
             <StackLayout class="page-container">
@@ -27,7 +33,6 @@
                     <Button col="1" :text="L('type_current')" @tap="blink($event, typeCurrentPassword)" class="btn btn-secondary" style="margin-left: 8;"></Button>
                 </GridLayout>
 
-                <Button :text="L('save')" @tap="blink($event, savePassword)" class="btn btn-primary save-button"></Button>
             </StackLayout>
         </ScrollView>
     </Page>
@@ -36,7 +41,7 @@
 <script lang="ts" setup>
 import { ref, computed, reactive, $navigateBack } from 'nativescript-vue';
 import { deviceAPI } from '../services/device-api';
-import { NavigatedData } from '@nativescript/core';
+import { NavigatedData, isIOS } from '@nativescript/core';
 import { passwordStore } from '../services/store';
 import { localize as L } from '@nativescript/localize';
 import { blink } from '../services/domUtils';
