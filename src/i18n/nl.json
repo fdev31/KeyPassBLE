@@ -87,5 +87,6 @@
     "failed_to_save_password": "Wachtwoord opslaan mislukt:",
     "bluetooth_disabled": "Bluetooth uitgeschakeld",
     "enable_bluetooth_to_scan": "Bluetooth is uitgeschakeld. Schakel het in om naar apparaten te zoeken.",
-    "open_settings": "Instellingen openen"
+    "open_settings": "Instellingen openen",
+    "search_passwords_placeholder": "Wachtwoorden zoeken..."
 }

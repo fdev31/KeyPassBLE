@@ -87,5 +87,6 @@
     "failed_to_save_password": "Error al guardar la contraseña:",
     "bluetooth_disabled": "Bluetooth desactivado",
     "enable_bluetooth_to_scan": "Bluetooth está desactivado. Por favor, actívalo para buscar dispositivos.",
-    "open_settings": "Abrir ajustes"
+    "open_settings": "Abrir ajustes",
+    "search_passwords_placeholder": "Buscar contraseñas..."
 }

@@ -5,7 +5,7 @@
                 <Label text="⚙️" fontSize="24" verticalAlignment="center" padding="0 10 0 0" />
             </ActionItem>
         </ActionBar>
-        <GridLayout rows="auto, *, auto" class="page-container">
+        <GridLayout rows="auto, auto, *, auto" class="page-container">
 
         <!-- Home View (Disconnected/Connecting/List Modes) -->
 
@@ -30,14 +30,17 @@
 
             <!-- List Mode -->
             <template v-if="currentMode === 'list'">
+                <!-- Search Field -->
+                <TextField row="0" v-model="searchQuery" :hint="L('search_passwords_placeholder')" class="search-field" />
+
                 <!-- Password List -->
                 <ScrollView row="1" class="list-container">
                     <StackLayout>
-                        <GridLayout v-for="entry in passwordStore.entries" :key="entry.uid" columns="*, auto" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
+                        <GridLayout v-for="entry in filteredPasswordEntries" :key="entry.uid" columns="*, auto" class="list-item" :class="{ 'selected': selectedPasswordEntry && selectedPasswordEntry.uid === entry.uid }">
                             <Button col="0" :text="entry.name" @tap="blink($event, () => onPasswordSelected(entry))" class="btn btn-primary password-button"></Button>
                             <Button col="1" text="✏️" @tap="onEditPassword(entry)" class="btn btn-secondary icon-button edit-button"></Button>
                         </GridLayout>
-                        <Label v-if="passwordStore.entries.length === 0" :text="L('no_passwords_found')" class="status-label"></Label>
+                        <Label v-if="filteredPasswordEntries.length === 0" :text="L('no_passwords_found')" class="status-label"></Label>
                     </StackLayout>
                 </ScrollView>
 
@@ -83,6 +86,7 @@ const statusMessage = ref(L('app_started_loading'));
 const currentMode = ref<'disconnected' | 'connecting' | 'list'>('disconnected');
 const selectedPasswordEntry = ref<PasswordEntry | null>(null);
 const startupLogicHasRun = ref(false);
+const searchQuery = ref('');
 
 // Advanced Options
 const endWithReturn = ref(true); // Default to true
@@ -111,6 +115,17 @@ const actionBarTitle = computed(() => {
         default:
             return L('keypass');
     }
+});
+
+const filteredPasswordEntries = computed(() => {
+    if (!searchQuery.value) {
+        return passwordStore.entries;
+    }
+    const normalizedQuery = searchQuery.value.toLowerCase().replace(/\s/g, '');
+    return passwordStore.entries.filter(entry => {
+        const normalizedName = entry.name.toLowerCase().replace(/\s/g, '');
+        return normalizedName.includes(normalizedQuery);
+    });
 });
 
 const runStartupLogic = async () => {
@@ -403,6 +418,16 @@ const openAdvancedOptions = () => {
         text-align: center;
         color: #6B7280; /* Muted text color */
         margin: 2 0;
+    }
+
+    .search-field {
+        margin-bottom: 16;
+        padding: 8 12;
+        border-width: 1;
+        border-color: #D1D5DB; /* Light gray border */
+        border-radius: 8;
+        font-size: 16;
+        color: #1F2937; /* Dark text */
     }
 
     /* Buttons */

@@ -87,5 +87,6 @@
     "failed_to_save_password": "Impossible salvare la password:",
     "bluetooth_disabled": "Bluetooth disabilitato",
     "enable_bluetooth_to_scan": "Il Bluetooth è disabilitato. Abilitalo per cercare i dispositivi.",
-    "open_settings": "Apri impostazioni"
+    "open_settings": "Apri impostazioni",
+    "search_passwords_placeholder": "Cerca password..."
 }

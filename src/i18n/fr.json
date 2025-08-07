@@ -87,5 +87,6 @@
     "failed_to_save_password": "Échec de l'enregistrement du not de passe:",
     "bluetooth_disabled": "Bluetooth désactivé",
     "enable_bluetooth_to_scan": "Le Bluetooth est désactivé. Veuillez l'activer pour rechercher des appareils.",
-    "open_settings": "Ouvrir les paramètres"
+    "open_settings": "Ouvrir les paramètres",
+    "search_passwords_placeholder": "Rechercher des mots de passe..."
 }

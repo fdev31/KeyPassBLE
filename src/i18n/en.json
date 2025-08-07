@@ -87,5 +87,6 @@
     "failed_to_save_password": "Failed to save password:",
     "bluetooth_disabled": "Bluetooth Disabled",
     "enable_bluetooth_to_scan": "Bluetooth is disabled. Please enable it to scan for devices.",
-    "open_settings": "Open Settings"
+    "open_settings": "Open Settings",
+    "search_passwords_placeholder": "Search passwords..."
 }
