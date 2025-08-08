@@ -259,6 +259,12 @@ const saveSettings = async () => {
             console.error("Failed to set passphrase on device:", error);
             alert(`Failed to update passphrase on device: ${error.message || error}`);
         }
+        try {
+            await deviceAPI.setDeviceName(deviceName.value);
+        } catch (error) {
+            console.error("Failed to set passphrase on device:", error);
+            alert(`Failed to update passphrase on device: ${error.message || error}`);
+        }
     } else {
         alert('Settings saved!');
     }

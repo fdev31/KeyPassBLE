@@ -71,6 +71,7 @@ class DeviceAPI implements BackendMethods {
         this.listCache = null;
         return this.cmd("reset");
     }
+    setDeviceName(name: string) { return this.cmd("setDeviceName", { name }); }
     updateWifiPass(newPass: string) { return this.cmd("updateWifiPass", { newPass }); }
     passphrase(p: string) { return this.cmd("passphrase", { p }); }
     // dump() { return this.cmd("dump", {}, 10000, 'text'); }
